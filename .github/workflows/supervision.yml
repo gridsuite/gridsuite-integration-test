@@ -2,7 +2,7 @@ name: Supervision
 
 on:
   schedule:
-    - cron:  '40 20 * * *'
+    - cron:  '*/5 * * * *'    # At every 5 minute
 
 
 jobs:
@@ -22,7 +22,13 @@ jobs:
           ref: refs/heads/add_cucumber_based_supervision
 
       - name: Compile with Maven, with no test
-        run: mvn --batch-mode compile        
+        run: mvn --batch-mode compile
+        
+      - name: Patch Cucumber properties
+        env:
+          super_secret: ${{ secrets.DEMO_BEARER }}
+        run: |
+          ./patch_cucumber_props.sh "demo" "$super_secret"
         
       - name: Cucumber tests with Maven on demo platform
         id: demo_supervision
