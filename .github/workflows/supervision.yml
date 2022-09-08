@@ -27,8 +27,15 @@ jobs:
       - name: Cucumber tests with Maven on demo platform
         id: demo_supervision
         run: mvn --batch-mode test -Dcucumber.filter.tags=@tagSupervision -Dusing_platform=demo
-        continue-on-error: true
+        continue-on-error: true      
         
-      - name: Failure action
-        run: mvn --batch-mode test -Dcucumber.filter.tags=@tagSupervision -Dusing_platform=recette
-        if: steps.demo_supervision.outcome != 'failure'
+      - name: Failure action slack-send
+        if: steps.demo_supervision.outcome == 'failure'
+        uses: slackapi/slack-github-action@v1.21.0
+        with:
+          # Slack channel ID where message will be posted. Needed if using bot token
+          channel-id: C01UWHG2FGU
+          # Message to post into Slack. Needed if using bot token
+          slack-message: Demo supervision failure
+
+        
