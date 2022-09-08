@@ -31,4 +31,4 @@ jobs:
         
       - name: Failure action
         run: mvn --batch-mode test -Dcucumber.filter.tags=@tagSupervision -Dusing_platform=recette
-        if: steps.demo_supervision.outcome == 'failure'
+        if: steps.demo_supervision.outcome != 'failure'
