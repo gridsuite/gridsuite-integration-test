@@ -18,6 +18,11 @@ jobs:
 
       - name: Checkout sources
         uses: actions/checkout@v1
+        with:
+          ref: refs/heads/add_cucumber_based_supervision
 
       - name: Build with Maven
         run: mvn --batch-mode -P jacoco verify
+        
+      - name: Cucumber with Maven
+        run: mvn --batch-mode test -Dcucumber.filter.tags=@tagSupervision -Dusing_platform=demo
