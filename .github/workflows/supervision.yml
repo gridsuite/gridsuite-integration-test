@@ -1,9 +1,9 @@
-# This is a basic workflow to help you get started with Actions
-
 name: Supervision
 
 on:
-  push:
+  schedule:
+    - cron:  '40 20 * * *'
+
 
 jobs:
   build:
@@ -22,13 +22,7 @@ jobs:
           ref: refs/heads/add_cucumber_based_supervision
 
       - name: Compile with Maven, with no test
-        run: mvn --batch-mode compile
-        
-      - name: Patch Cucumber properties
-        env:
-          super_secret: ${{ secrets.DEMO_BEARER }}
-        run: |
-          ./patch_cucumber_props.sh "demo" "$super_secret"
+        run: mvn --batch-mode compile        
         
       - name: Cucumber tests with Maven on demo platform
         id: demo_supervision
