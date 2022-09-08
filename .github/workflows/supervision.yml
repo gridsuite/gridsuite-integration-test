@@ -21,8 +21,8 @@ jobs:
         with:
           ref: refs/heads/add_cucumber_based_supervision
 
-      - name: Build with Maven
-        run: mvn --batch-mode -P jacoco verify
+      - name: Compile with Maven, with no test
+        run: mvn --batch-mode -P jacoco compile
         
-      - name: Cucumber with Maven
+      - name: Cucumber tests with Maven
         run: mvn --batch-mode test -Dcucumber.filter.tags=@tagSupervision -Dusing_platform=demo
