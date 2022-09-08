@@ -5,7 +5,7 @@ Feature: GridSuite supervision and monitoring tests
     Given using platform "local"
 
   # ---------------------------------------------------------------------------
-  Rule: Check the global health of the system
+  Rule: Check the global health of the gridsuite platform
       
     Scenario: create a new study from a new case, run 2 loadflow computations
 
