@@ -22,7 +22,13 @@ jobs:
           ref: refs/heads/add_cucumber_based_supervision
 
       - name: Compile with Maven, with no test
-        run: mvn --batch-mode -P jacoco compile
+        run: mvn --batch-mode compile
         
-      - name: Cucumber tests with Maven
+      - name: Cucumber tests with Maven on demo platform
+        id: demo_supervision
         run: mvn --batch-mode test -Dcucumber.filter.tags=@tagSupervision -Dusing_platform=demo
+        continue-on-error: true
+        
+      - name: Failure action
+        run: mvn --batch-mode test -Dcucumber.filter.tags=@tagSupervision -Dusing_platform=recette
+        if: steps.demo_supervision.outcome == 'failure'
