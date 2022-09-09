@@ -42,6 +42,6 @@ jobs:
         uses: rtCamp/action-slack-notify@v2.2.0
         env:
           SLACK_WEBHOOK: ${{ secrets.SUPERVISION_CHANNEL_SLACK_WEBHOOK }}
-          SLACK_USERNAME: CucumberSupervision
-          
+          SLACK_USERNAME: 'CucumberSupervision'
+          SLACK_MESSAGE: 'Cucumber Supervision Failure on demo platform :bell:'
         
