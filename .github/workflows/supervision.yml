@@ -38,7 +38,7 @@ jobs:
         
       - name: Failure action Slack Notification
         if: steps.demo_supervision.outcome == 'failure'
-        uses: rtCamp/action-slack-notify@v2
+        uses: rtCamp/action-slack-notify@v2.2.0
         env:
           SLACK_WEBHOOK: ${{ secrets.SUPERVISION_CHANNEL_SLACK_WEBHOOK }}
           SLACK_USERNAME: CucumberSupervision
