@@ -7,7 +7,7 @@ Feature: GridSuite supervision and monitoring tests
   # ---------------------------------------------------------------------------
   Rule: Check the global health of the gridsuite platform
       
-    Scenario: create a new study from a new case, run 2 loadflow computations
+    Scenario: create a new study from a new case, run 2 converging loadflow computations
 
       Given using tmp root directory as "tmpdir"
 
