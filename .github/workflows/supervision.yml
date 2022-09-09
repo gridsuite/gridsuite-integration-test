@@ -26,9 +26,10 @@ jobs:
         
       - name: Patch Cucumber properties
         env:
-          super_secret: ${{ secrets.DEMO_BEARER }}
+          DEMO_BEARER: ${{ secrets.DEMO_BEARER }}
         run: |
-          ./patch_cucumber_props.sh "demo" "$super_secret"
+          sed -i -e "s/bearer=.*/bearer=$DEMO_BEARER/" ./src/test/resources/demo_env.properties
+          cat ./src/test/resources/demo_env.properties
         
       - name: Cucumber tests with Maven on demo platform
         id: demo_supervision
