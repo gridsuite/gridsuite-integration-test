@@ -2,7 +2,7 @@ name: Supervision
 
 on:
   schedule:
-    - cron:  '*/5 * * * *'    # At every 5 minute
+    - cron:  '0/10 * * * *'    # At every 10 minutes
 
 
 jobs:
@@ -36,13 +36,11 @@ jobs:
         run: mvn --batch-mode test -Dcucumber.filter.tags=@tagSupervision -Dusing_platform=demo
         continue-on-error: true      
         
-      - name: Failure action slack-send
+      - name: Failure action Slack Notification
         if: steps.demo_supervision.outcome == 'failure'
-        uses: slackapi/slack-github-action@v1.21.0
-        with:
-          # Slack channel ID where message will be posted. Needed if using bot token
-          channel-id: C01UWHG2FGU
-          # Message to post into Slack. Needed if using bot token
-          slack-message: Demo supervision failure
-
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SUPERVISION_CHANNEL_SLACK_WEBHOOK }}
+          SLACK_USERNAME: CucumberSupervision
+          
         
