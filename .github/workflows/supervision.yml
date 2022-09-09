@@ -3,7 +3,7 @@ name: Supervision
 on:
   workflow_dispatch:
   schedule:
-    - cron:  '0/7 * * * *'    # At every 10 (7 + 3 delay)
+    - cron:  '0/10 * * * *'    # At every 10 minutes
 
 
 jobs:
