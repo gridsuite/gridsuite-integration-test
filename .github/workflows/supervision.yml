@@ -3,7 +3,7 @@ name: Supervision
 on:
   workflow_dispatch:
   schedule:
-    - cron:  '0/10 * * * *'    # At every 10 minutes
+    - cron:  '0/7 * * * *'    # At every 10 (7 + 3 delay)
 
 
 jobs:
@@ -20,7 +20,7 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v1
         with:
-          ref: refs/heads/add_cucumber_based_supervision
+          ref: refs/heads/add_cucumber_based_supervision # TODO remove after PR merge
 
       - name: Compile with Maven, with no test
         run: mvn --batch-mode compile
@@ -43,5 +43,5 @@ jobs:
         env:
           SLACK_WEBHOOK: ${{ secrets.SUPERVISION_CHANNEL_SLACK_WEBHOOK }}
           SLACK_USERNAME: 'CucumberSupervision'
-          SLACK_MESSAGE: 'Cucumber Supervision Failure on demo platform :bell:'
+          SLACK_MESSAGE: 'Cucumber Supervision Failure on demo platform (https://demo.gridsuite.org/gridexplore) :bell:'
         
