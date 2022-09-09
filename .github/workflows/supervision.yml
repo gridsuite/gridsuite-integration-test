@@ -1,6 +1,7 @@
 name: Supervision
 
 on:
+  workflow_dispatch:
   schedule:
     - cron:  '0/10 * * * *'    # At every 10 minutes
 
