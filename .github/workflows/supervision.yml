@@ -7,7 +7,7 @@ on:
 
 
 jobs:
-  build:
+  cucumber_supervision_slack:
 
     runs-on: ubuntu-latest
 
@@ -22,7 +22,7 @@ jobs:
         with:
           ref: refs/heads/add_cucumber_based_supervision # TODO remove after PR merge
 
-      - name: Compile with Maven, with no test
+      - name: Compile with Maven
         run: mvn --batch-mode compile
         
       - name: Patch Cucumber properties
@@ -42,6 +42,5 @@ jobs:
         uses: rtCamp/action-slack-notify@v2.2.0
         env:
           SLACK_WEBHOOK: ${{ secrets.SUPERVISION_CHANNEL_SLACK_WEBHOOK }}
-          SLACK_USERNAME: 'CucumberSupervision'
           SLACK_MESSAGE: 'Cucumber Supervision Failure on demo platform (https://demo.gridsuite.org/gridexplore) :bell:'
         
