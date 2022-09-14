@@ -37,9 +37,14 @@ jobs:
         run: mvn --batch-mode test -Dcucumber.filter.tags=@tagSupervision -Dusing_platform=demo
         continue-on-error: true      
         
-
+      - name: Failure action Slack Notification
+        if: steps.demo_supervision.outcome == 'failure'
+        uses: rtCamp/action-slack-notify@v2.2.0
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SUPERVISION_CHANNEL_SLACK_WEBHOOK }}
+          SLACK_MESSAGE: 'Cucumber Supervision Failure on demo platform (https://demo.gridsuite.org/gridexplore) :bell:'
                     
       - name: Failure exit
-        if: steps.demo_supervision.outcome != 'failure'
-        run: exit 1
+        if: steps.demo_supervision.outcome == 'failure'
+        run: exit 1  # to mark the job as failed and red
         
