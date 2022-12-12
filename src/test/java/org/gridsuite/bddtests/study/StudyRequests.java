@@ -250,14 +250,23 @@ public final class StudyRequests {
     }
 
     public void updateSwitch(String switchId, String studyId, String nodeId, boolean openState) {
+        // create json body
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode body = mapper.createObjectNode();
+        body.put("equipmentAttributeName", "open");
+        body.put("equipmentAttributeValue", openState);
+        body.put("equipmentId", switchId);
+        body.put("equipmentType", "SWITCH");
+        body.put("type", "EQUIPMENT_ATTRIBUTE_MODIFICATION");
         String path = UriComponentsBuilder.fromPath(
-                        "studies/{studyId}/nodes/{nodeUuid}/network-modification/switches/{switchId}?open={openState}")
-                .buildAndExpand(studyId, nodeId, switchId, openState)
+                        "studies/{studyId}/nodes/{nodeUuid}/network-modifications")
+                .buildAndExpand(studyId, nodeId)
                 .toUriString();
         LOGGER.info("updateSwitch uri: '{}'", path);
 
-        webClient.put()
+        webClient.post()
                 .uri(path)
+                .body(BodyInserters.fromValue(body.toString()))
                 .retrieve()
                 .bodyToMono(String.class)
                 .block();
