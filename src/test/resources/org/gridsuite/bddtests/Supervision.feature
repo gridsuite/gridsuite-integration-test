@@ -18,7 +18,7 @@ Feature: GridSuite supervision and monitoring tests
       Then wait for "microStudy" study creation in "tmpdir"
 
       When get study "microStudy" from "tmpdir"
-      And get node "modification node 0"
+      And get node "N1"
       And using loadflow "OpenLoadFlow"
       And run loadflow
       Then wait for loadflow status "CONVERGED"
