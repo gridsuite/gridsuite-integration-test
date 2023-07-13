@@ -470,13 +470,8 @@ public class StudySrvStepDefinitions {
     @When("get loadflow result from {string} as {string}")
     public void getLoadflowDataFromAs(String studyNodeName, String dataAlias) {
         TestContext.Node nodeIds = ctx.getNodeId(studyNodeName);
-        JsonNode lfData = StudyRequests.getInstance().getLoadFlowInfos(nodeIds.studyId, nodeIds.nodeId);
-        assertNotNull("Cannot retrieve loadflow result", lfData);
-        assertTrue("Loadflow result data is null", lfData.hasNonNull("loadFlowResult"));
-        JsonNode lfResult = lfData.get("loadFlowResult");
-        assertTrue("No loadflow component results", lfResult.has("componentResults") && lfResult.get("componentResults").isArray() && lfResult.get("componentResults").size() > 0);
-        // we keep only the first entry of componentResults array
-        ctx.setData(dataAlias, lfResult.get("componentResults").get(0));
+        String result = StudyRequests.getInstance().getLoadFlowInfos(nodeIds.studyId, nodeIds.nodeId);
+        assertTrue("TODO getLoadFlowInfos does not return LF details anymore (just the status, like CONVERGED)", result.isEmpty());
     }
 
     // --------------------------------------------------------

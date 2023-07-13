@@ -372,10 +372,7 @@ public class TestContext {
     private boolean statusMatching(String expectedStatus, String studyId, String nodeId, Computation compName) {
         switch (compName) {
             case LOADFLOW:
-                JsonNode node = StudyRequests.getInstance().getLoadFlowInfos(studyId, nodeId);
-                if (node != null && node.has("loadFlowStatus")) {
-                    return expectedStatus.equalsIgnoreCase(node.get("loadFlowStatus").asText());
-                }
+                return expectedStatus.equalsIgnoreCase(StudyRequests.getInstance().getLoadFlowInfos(studyId, nodeId));
             case SECURITY_ANALYSIS:
                 return expectedStatus.equalsIgnoreCase(StudyRequests.getInstance().getSecurityAnalysisStatus(studyId, nodeId));
             default:
