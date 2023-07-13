@@ -303,7 +303,7 @@ public class StudySrvStepDefinitions {
     // --------------------------------------------------------
     @When("search {string} equipment with name {string} as {string}")
     public void searchEquipmentWithName(String equipmentType, String equipmentName, String alias) {
-        searchEquipmentWithNameFrom(equipmentType, equipmentName, TestContext.CURRENT_ELEMENT,  alias);
+        searchEquipmentWithNameFrom(equipmentType, equipmentName, TestContext.CURRENT_ELEMENT, alias);
     }
 
     // --------------------------------------------------------
@@ -316,7 +316,7 @@ public class StudySrvStepDefinitions {
     // --------------------------------------------------------
     @When("search equipment with name {string} as {string}")
     public void searchGenericEquipmentWithName(String equipmentName, String alias) {
-        searchGenericEquipmentWithNameFrom(equipmentName, TestContext.CURRENT_ELEMENT,  alias);
+        searchGenericEquipmentWithNameFrom(equipmentName, TestContext.CURRENT_ELEMENT, alias);
     }
 
     // --------------------------------------------------------
@@ -328,7 +328,7 @@ public class StudySrvStepDefinitions {
     // --------------------------------------------------------
     @When("search {string} equipment with id {string} as {string}")
     public void searchEquipmentWithIdFrom(String equipmentType, String equipmentName, String alias) {
-        searchEquipmentWithIdFrom(equipmentType, equipmentName, TestContext.CURRENT_ELEMENT,  alias);
+        searchEquipmentWithIdFrom(equipmentType, equipmentName, TestContext.CURRENT_ELEMENT, alias);
     }
 
     // --------------------------------------------------------
@@ -340,7 +340,7 @@ public class StudySrvStepDefinitions {
 
     @When("search equipment with id {string} as {string}")
     public void searchGenericEquipmentWithId(String equipmentName, String alias) {
-        searchGenericEquipmentWithIdFrom(equipmentName, TestContext.CURRENT_ELEMENT,  alias);
+        searchGenericEquipmentWithIdFrom(equipmentName, TestContext.CURRENT_ELEMENT, alias);
     }
 
     @When("search equipment with id {string} from {string} as {string}")
@@ -381,9 +381,9 @@ public class StudySrvStepDefinitions {
 
         for (String lineAttr : requestedAttributes) {
             // a key can be a json path "a.b.c" => "/a/b/c"
-            String attrExpr = "/" +  lineAttr;
+            String attrExpr = "/" + lineAttr;
             if (lineAttr.contains(".")) {
-                attrExpr = "/" +  lineAttr.replace('.', '/');
+                attrExpr = "/" + lineAttr.replace('.', '/');
             }
             JsonNode jsonData = jsonRoot.at(attrExpr);
             if (jsonData.isValueNode()) {
@@ -470,13 +470,8 @@ public class StudySrvStepDefinitions {
     @When("get loadflow result from {string} as {string}")
     public void getLoadflowDataFromAs(String studyNodeName, String dataAlias) {
         TestContext.Node nodeIds = ctx.getNodeId(studyNodeName);
-        JsonNode lfData = StudyRequests.getInstance().getLoadFlowInfos(nodeIds.studyId, nodeIds.nodeId);
-        assertNotNull("Cannot retrieve loadflow result", lfData);
-        assertTrue("Loadflow result data is null", lfData.hasNonNull("loadFlowResult"));
-        JsonNode lfResult = lfData.get("loadFlowResult");
-        assertTrue("No loadflow component results", lfResult.has("componentResults") && lfResult.get("componentResults").isArray() && lfResult.get("componentResults").size() > 0);
-        // we keep only the first entry of componentResults array
-        ctx.setData(dataAlias, lfResult.get("componentResults").get(0));
+        String result = StudyRequests.getInstance().getLoadFlowInfos(nodeIds.studyId, nodeIds.nodeId);
+        assertTrue("TODO getLoadFlowInfos does not return LF details anymore (just the status, like CONVERGED)", result.isEmpty());
     }
 
     // --------------------------------------------------------

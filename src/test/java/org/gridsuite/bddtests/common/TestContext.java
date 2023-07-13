@@ -279,7 +279,7 @@ public class TestContext {
     public void createDirectory(String dirName, String parentName, boolean isPrivate, String owner) {
         String parentId = getDirId(parentName);
         String dirId = DirectoryRequests.getInstance().createDirectory(dirName, parentId, isPrivate, owner);
-        assertNotNull("Could not create directory " + dirName + " in " +  parentName, dirId);
+        assertNotNull("Could not create directory " + dirName + " in " + parentName, dirId);
         currentDirectoryIds.put(dirName, dirId);
     }
 
@@ -372,10 +372,7 @@ public class TestContext {
     private boolean statusMatching(String expectedStatus, String studyId, String nodeId, Computation compName) {
         switch (compName) {
             case LOADFLOW:
-                JsonNode node = StudyRequests.getInstance().getLoadFlowInfos(studyId, nodeId);
-                if (node != null && node.has("loadFlowStatus")) {
-                    return expectedStatus.equalsIgnoreCase(node.get("loadFlowStatus").asText());
-                }
+                return expectedStatus.equalsIgnoreCase(StudyRequests.getInstance().getLoadFlowInfos(studyId, nodeId));
             case SECURITY_ANALYSIS:
                 return expectedStatus.equalsIgnoreCase(StudyRequests.getInstance().getSecurityAnalysisStatus(studyId, nodeId));
             default:

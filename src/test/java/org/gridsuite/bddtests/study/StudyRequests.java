@@ -301,27 +301,17 @@ public final class StudyRequests {
                 .block();
     }
 
-    public JsonNode getLoadFlowInfos(String studyId, String nodeId) {
-        String path = UriComponentsBuilder.fromPath("studies/{studyId}/nodes/{nodeId}/loadflow/infos")
+    public String getLoadFlowInfos(String studyId, String nodeId) {
+        String path = UriComponentsBuilder.fromPath("studies/{studyId}/nodes/{nodeId}/loadflow/status")
                 .buildAndExpand(studyId, nodeId)
                 .toUriString();
         LOGGER.info("getLoadFlowInfos uri: '{}'", path);
-        String jsonResponse = webClient.get()
+        String status = webClient.get()
                 .uri(path)
                 .retrieve()
                 .bodyToMono(String.class)
                 .block();
-
-        // parse Json data
-        if (jsonResponse != null) {
-            try {
-                ObjectMapper mapper = new ObjectMapper();
-                return mapper.readTree(jsonResponse);
-            } catch (JsonProcessingException je) {
-                return null;
-            }
-        }
-        return null;
+        return status == null ? "NOT_DONE" : status;
     }
 
     public String getSecurityAnalysisStatus(String studyId, String nodeId) {
