@@ -303,7 +303,7 @@ public class StudySrvStepDefinitions {
     // --------------------------------------------------------
     @When("search {string} equipment with name {string} as {string}")
     public void searchEquipmentWithName(String equipmentType, String equipmentName, String alias) {
-        searchEquipmentWithNameFrom(equipmentType, equipmentName, TestContext.CURRENT_ELEMENT,  alias);
+        searchEquipmentWithNameFrom(equipmentType, equipmentName, TestContext.CURRENT_ELEMENT, alias);
     }
 
     // --------------------------------------------------------
@@ -316,7 +316,7 @@ public class StudySrvStepDefinitions {
     // --------------------------------------------------------
     @When("search equipment with name {string} as {string}")
     public void searchGenericEquipmentWithName(String equipmentName, String alias) {
-        searchGenericEquipmentWithNameFrom(equipmentName, TestContext.CURRENT_ELEMENT,  alias);
+        searchGenericEquipmentWithNameFrom(equipmentName, TestContext.CURRENT_ELEMENT, alias);
     }
 
     // --------------------------------------------------------
@@ -328,7 +328,7 @@ public class StudySrvStepDefinitions {
     // --------------------------------------------------------
     @When("search {string} equipment with id {string} as {string}")
     public void searchEquipmentWithIdFrom(String equipmentType, String equipmentName, String alias) {
-        searchEquipmentWithIdFrom(equipmentType, equipmentName, TestContext.CURRENT_ELEMENT,  alias);
+        searchEquipmentWithIdFrom(equipmentType, equipmentName, TestContext.CURRENT_ELEMENT, alias);
     }
 
     // --------------------------------------------------------
@@ -340,7 +340,7 @@ public class StudySrvStepDefinitions {
 
     @When("search equipment with id {string} as {string}")
     public void searchGenericEquipmentWithId(String equipmentName, String alias) {
-        searchGenericEquipmentWithIdFrom(equipmentName, TestContext.CURRENT_ELEMENT,  alias);
+        searchGenericEquipmentWithIdFrom(equipmentName, TestContext.CURRENT_ELEMENT, alias);
     }
 
     @When("search equipment with id {string} from {string} as {string}")
@@ -381,9 +381,9 @@ public class StudySrvStepDefinitions {
 
         for (String lineAttr : requestedAttributes) {
             // a key can be a json path "a.b.c" => "/a/b/c"
-            String attrExpr = "/" +  lineAttr;
+            String attrExpr = "/" + lineAttr;
             if (lineAttr.contains(".")) {
-                attrExpr = "/" +  lineAttr.replace('.', '/');
+                attrExpr = "/" + lineAttr.replace('.', '/');
             }
             JsonNode jsonData = jsonRoot.at(attrExpr);
             if (jsonData.isValueNode()) {

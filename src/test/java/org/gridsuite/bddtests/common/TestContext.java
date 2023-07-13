@@ -279,7 +279,7 @@ public class TestContext {
     public void createDirectory(String dirName, String parentName, boolean isPrivate, String owner) {
         String parentId = getDirId(parentName);
         String dirId = DirectoryRequests.getInstance().createDirectory(dirName, parentId, isPrivate, owner);
-        assertNotNull("Could not create directory " + dirName + " in " +  parentName, dirId);
+        assertNotNull("Could not create directory " + dirName + " in " + parentName, dirId);
         currentDirectoryIds.put(dirName, dirId);
     }
 
