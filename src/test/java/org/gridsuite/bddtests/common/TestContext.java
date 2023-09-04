@@ -112,7 +112,7 @@ public class TestContext {
         if (tmpRootDirId != null) {
             LOGGER.info("Remove current tmp root dir");
             String user = EnvProperties.getInstance().getUserName();
-            DirectoryRequests.getInstance().removeElement(tmpRootDirId, user);
+            ExploreRequests.getInstance().removeElement(tmpRootDirId, user);
         }
         currentStudyIds = null;
         currentDirectoryIds = null;

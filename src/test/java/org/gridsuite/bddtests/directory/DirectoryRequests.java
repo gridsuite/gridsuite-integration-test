@@ -112,16 +112,6 @@ public final class DirectoryRequests {
         return eltId[0];
     }
 
-    public void removeElement(String eltId, String userId) {
-        // remove a single element or a whole directory (RECURSIVELY)
-        webClient.delete()
-                .uri("elements/" + eltId)
-                .header("userId", userId)
-                .retrieve()
-                .bodyToMono(String.class)
-                .block();
-    }
-
     public String createRootDirectory(String dirName, String user, boolean isPrivate, String desc) {
         // create body (json tree)
         ObjectMapper mapper = new ObjectMapper();
