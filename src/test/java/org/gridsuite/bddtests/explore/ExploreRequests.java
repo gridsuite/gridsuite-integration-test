@@ -42,12 +42,12 @@ public final class ExploreRequests {
 
     public void createStudyFromCase(String studyName, String caseId, String description, String directoryId, String userId) {
         String path = UriComponentsBuilder.fromPath(
-            "explore/studies/{studyName}/cases/{caseUuid}?description={description}&parentDirectoryUuid={parentDirectoryUuid}")
+            "explore/studies/{studyName}/cases/{caseUuid}?duplicateCase=true&description={description}&parentDirectoryUuid={parentDirectoryUuid}")
             .buildAndExpand(studyName, caseId, description, directoryId)
             .toUriString();
         LOGGER.info("createStudyFromCase uri: '{}'", path);
 
-        String response = webClient.post()
+        webClient.post()
                 .uri(path)
                 .header("userId", userId)
                 .retrieve()
@@ -160,5 +160,19 @@ public final class ExploreRequests {
                 .retrieve()
                 .bodyToMono(String.class)
                 .block();
+    }
+
+public void removeElement(String eltId, String userId) {
+        // remove a single element or a whole directory (RECURSIVELY)
+        String path = UriComponentsBuilder.fromPath("explore/elements/{elementUuid}")
+                .buildAndExpand(eltId)
+                .toUriString();
+
+        webClient.delete()
+            .uri(path)
+            .header("userId", userId)
+            .retrieve()
+            .bodyToMono(String.class)
+            .block();
     }
 }

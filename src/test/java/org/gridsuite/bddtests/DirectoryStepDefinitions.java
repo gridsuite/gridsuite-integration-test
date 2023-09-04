@@ -11,6 +11,7 @@ import io.cucumber.java.en.*;
 import org.gridsuite.bddtests.common.EnvProperties;
 import org.gridsuite.bddtests.common.TestContext;
 import org.gridsuite.bddtests.directory.DirectoryRequests;
+import org.gridsuite.bddtests.explore.ExploreRequests;
 
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertTrue;
@@ -145,7 +146,7 @@ public class DirectoryStepDefinitions {
     @When("remove directory {string}")
     public void removeDirectory(String dirName) {
         String dirId = ctx.getDirId(dirName);
-        DirectoryRequests.getInstance().removeElement(dirId, EnvProperties.getInstance().getUserName());
+        ExploreRequests.getInstance().removeElement(dirId, EnvProperties.getInstance().getUserName());
     }
 
     // --------------------------------------------------------
@@ -189,24 +190,21 @@ public class DirectoryStepDefinitions {
     @And("remove contingency-list {string}")
     public void removeContingencyList(String aliasName) {
         String eltId = ctx.getContingencyListId(aliasName);
-        // TODO wrong: must use explore service
-        DirectoryRequests.getInstance().removeElement(eltId, EnvProperties.getInstance().getUserName());
+        ExploreRequests.getInstance().removeElement(eltId, EnvProperties.getInstance().getUserName());
     }
 
     // --------------------------------------------------------
     @And("remove filter {string}")
     public void removeFilter(String aliasName) {
         String eltId = ctx.getFilterId(aliasName);
-        // TODO wrong: must use explore service
-        DirectoryRequests.getInstance().removeElement(eltId, EnvProperties.getInstance().getUserName());
+        ExploreRequests.getInstance().removeElement(eltId, EnvProperties.getInstance().getUserName());
     }
 
     // --------------------------------------------------------
     @And("remove study {string}")
     public void removeStudy(String aliasName) {
         String eltId = ctx.getStudyId(aliasName);
-        // TODO wrong: must use explore service
-        DirectoryRequests.getInstance().removeElement(eltId, EnvProperties.getInstance().getUserName());
+        ExploreRequests.getInstance().removeElement(eltId, EnvProperties.getInstance().getUserName());
     }
 
     // --------------------------------------------------------
