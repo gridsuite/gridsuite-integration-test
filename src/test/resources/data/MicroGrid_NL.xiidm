@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<iidm:network xmlns:iidm="http://www.powsybl.org/schema/iidm/1_7" id="test" caseDate="2018-11-08T00:00:00.000Z" forecastDistance="0" sourceFormat="test" minimumValidationLevel="STEADY_STATE_HYPOTHESIS">
+    <iidm:substation id="_c49942d6-8b01-4b01-b5e8-f1180f84906c">
+        <iidm:voltageLevel id="vl1" nominalV="400.0" topologyKind="NODE_BREAKER">
+            <iidm:nodeBreakerTopology>
+                <iidm:busbarSection id="b1" node="1"/>
+                <iidm:switch id="br2" kind="BREAKER" retained="false" open="false" node1="1" node2="2"/>
+                <iidm:switch id="br1" kind="BREAKER" retained="false" open="false" node1="0" node2="1"/>
+                <iidm:switch id="br3" kind="BREAKER" retained="false" open="false" node1="1" node2="3"/>
+            </iidm:nodeBreakerTopology>
+            <iidm:generator id="g1" energySource="OTHER" minP="0.0" maxP="200.0" voltageRegulatorOn="true" targetP="200.0" targetV="400.0" node="0" p="-200.0" q="-40.0">
+                <iidm:minMaxReactiveLimits minQ="-1.7976931348623157E308" maxQ="1.7976931348623157E308"/>
+            </iidm:generator>
+        </iidm:voltageLevel>
+    </iidm:substation>
+    <iidm:substation id="_87f7002b-056f-4a6a-a872-1744eea757e3">
+        <iidm:voltageLevel id="vl2" nominalV="400.0" topologyKind="NODE_BREAKER">
+            <iidm:nodeBreakerTopology>
+                <iidm:busbarSection id="b2" node="1"/>
+                <iidm:switch id="br5" kind="BREAKER" retained="false" open="false" node1="1" node2="2"/>
+                <iidm:switch id="br4" kind="BREAKER" retained="false" open="false" node1="1" node2="0"/>
+            </iidm:nodeBreakerTopology>
+        </iidm:voltageLevel>
+    </iidm:substation>
+    <iidm:substation id="_37e14a0f-5e34-4647-a062-8bfd9305fa9d">
+        <iidm:voltageLevel id="vl3" nominalV="400.0" topologyKind="NODE_BREAKER">
+            <iidm:nodeBreakerTopology>
+                <iidm:busbarSection id="b3" node="1"/>
+                <iidm:switch id="br8" kind="BREAKER" retained="false" open="false" node1="1" node2="3"/>
+                <iidm:switch id="br6" kind="BREAKER" retained="false" open="false" node1="0" node2="1"/>
+                <iidm:switch id="br7" kind="BREAKER" retained="false" open="false" node1="1" node2="2"/>
+            </iidm:nodeBreakerTopology>
+            <iidm:load id="l1" loadType="UNDEFINED" p0="180.0" q0="18.0" node="0" p="180.0" q="36.0"/>
+        </iidm:voltageLevel>
+    </iidm:substation>
+    <iidm:line id="line3" r="0.1" x="10.0" g1="0.0" b1="0.0" g2="0.0" b2="0.0" node1="3" voltageLevelId1="vl1" node2="3" voltageLevelId2="vl3" p1="-100.0" q1="-20.0" p2="90.0" q2="18.0"/>
+    <iidm:line id="line2" r="0.1" x="10.0" g1="0.0" b1="0.0" g2="0.0" b2="0.0" node1="2" voltageLevelId1="vl2" node2="2" voltageLevelId2="vl3" p1="95.0" q1="19.0" p2="-90.0" q2="-18.0"/>
+    <iidm:line id="line1" r="0.1" x="10.0" g1="0.0" b1="0.0" g2="0.0" b2="0.0" node1="2" voltageLevelId1="vl1" node2="0" voltageLevelId2="vl2" p1="100.0" q1="20.0" p2="-95.0" q2="-19.0"/>
+</iidm:network>
