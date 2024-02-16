@@ -41,9 +41,10 @@ public final class ExploreRequests {
     }
 
     public void createStudyFromCase(String studyName, String caseId, String description, String directoryId, String userId) {
+        final String caseFormat = "XIIDM"; // TODO must be a parameter coming from the step
         String path = UriComponentsBuilder.fromPath(
-            "explore/studies/{studyName}/cases/{caseUuid}?duplicateCase=true&description={description}&parentDirectoryUuid={parentDirectoryUuid}")
-            .buildAndExpand(studyName, caseId, description, directoryId)
+            "explore/studies/{studyName}/cases/{caseUuid}?duplicateCase=true&description={description}&parentDirectoryUuid={parentDirectoryUuid}&caseFormat={caseFormat}")
+            .buildAndExpand(studyName, caseId, description, directoryId, caseFormat)
             .toUriString();
         LOGGER.info("createStudyFromCase uri: '{}'", path);
 
