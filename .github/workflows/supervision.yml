@@ -7,9 +7,7 @@ on:
 
 jobs:
   cucumber_supervision_slack:
-
     runs-on: ubuntu-latest
-
     steps:
       - name: Set up JDK 11
         uses: actions/setup-java@v1
@@ -34,12 +32,26 @@ jobs:
         run: mvn --batch-mode test -Dcucumber.filter.tags=@tagSupervision -Dusing_platform=demo
         continue-on-error: true
 
-      - name: Failure action Slack Notification
+      #- name: Failure action Slack Notification
+      #  if: steps.demo_supervision.outcome == 'failure'
+      #  uses: rtCamp/action-slack-notify@v2.2.0
+      #  env:
+      #    SLACK_WEBHOOK: ${{ secrets.SUPERVISION_CHANNEL_SLACK_WEBHOOK }}
+      #    SLACK_MESSAGE: 'Cucumber Supervision Failure on demo platform (https://demo.gridsuite.org/gridexplore) :bell:'
+
+      - name: Failure action Teams notification
         if: steps.demo_supervision.outcome == 'failure'
-        uses: rtCamp/action-slack-notify@v2.2.0
-        env:
-          SLACK_WEBHOOK: ${{ secrets.SUPERVISION_CHANNEL_SLACK_WEBHOOK }}
-          SLACK_MESSAGE: 'Cucumber Supervision Failure on demo platform (https://demo.gridsuite.org/gridexplore) :bell:'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          connection_url: ${{secrets.NOTIF_MAIL_ADDRESS}}
+          #ignore_cert: true
+          from: ${{secrets.NOTIF_MAIL_SENDER}}
+          to: ${{secrets.NOTIF_MAIL_RECIPIENTS_SUPERVISION}}
+          reply_to: no-reply@rte-france.com
+          subject: Integration tests fails on Demo platform
+          body: 'Cucumber Supervision Failure on demo platform (<https://demo.gridsuite.org/gridexplore>) 🔔'
+          convert_markdown: true
+          priority: high
 
       - name: Failure exit
         if: steps.demo_supervision.outcome == 'failure'
