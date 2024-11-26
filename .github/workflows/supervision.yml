@@ -11,36 +11,160 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
+      - name: Get prepare dates
+        # must call always to avoid implicit call to success()
+        # not really useful for first job but for symmetry
+        id: prepare
+        if: always()
+        run: |
+          echo "preparets=$(date +%s)" >> $GITHUB_OUTPUT
+          nextwatchdogts=$((60*15 + $(date +%s)))
+          echo "nextwatchdogts=$nextwatchdogts" >> $GITHUB_OUTPUT
+          echo "nextwatchdogutc=$(date -d @$nextwatchdogts)" >> $GITHUB_OUTPUT
+
       - name: Set up JDK 11
-        uses: actions/setup-java@v1
+        id: setupjdk
+        # must call always to avoid implicit call to success()
+        # useful to try as many steps as possible to see all errors
+        if: always()
         with:
           java-version: 11
+        uses: actions/setup-java@v1
 
       - name: Checkout sources
+        id: checkout
+        # must call always to avoid implicit call to success()
+        # useful to try as many steps as possible to see all errors
+        if: always()
         uses: actions/checkout@v1
 
       - name: Compile with Maven
+        id: compile
+        # must call always to avoid implicit call to success()
+        if: always() && steps.checkout.outcome == 'success' && steps.setupjdk.outcome == 'success'
         run: mvn --batch-mode compile
 
       - name: Patch Cucumber properties
+        id: cucumberproperties
+        # must call always to avoid implicit call to success()
+        if: always() && steps.compile.outcome == 'success'
         env:
           DEMO_BEARER: ${{ secrets.DEMO_BEARER }}
         run: |
           sed -i -e "s/bearer=.*/bearer=$DEMO_BEARER/" ./src/test/resources/demo_env.properties
           cat ./src/test/resources/demo_env.properties
 
+      - name: Get cucumber start unix timestamp
+        id: cucumberstart
+        if: always() && steps.prepare.outcome == 'success'
+        run: |
+          echo "cucumberstartts=$(date +%s)" >> $GITHUB_OUTPUT
+          prepareduration=$(($(date +%s) - ${{steps.prepare.outputs.preparets}}))s
+          echo "prepareduration=$prepareduration" >> $GITHUB_OUTPUT
+
       - name: Cucumber tests with Maven on demo platform
         id: demo_supervision
+        # must call always to avoid implicit call to success()
+        if: always() && steps.cucumberproperties.outcome == 'success'
         run: mvn --batch-mode test -Dcucumber.filter.tags=@tagSupervision -Dusing_platform=demo
-        continue-on-error: true
+
+      - name: Get cucumber end dates
+        id: cucumberend
+        # must call always to avoid implicit call to success()
+        if: always() && steps.cucumberstart.outcome == 'success'
+        run: |
+          echo "cucumberenddateutc=$(date)" >> $GITHUB_OUTPUT
+          cucumberduration=$(($(date +%s) - ${{steps.cucumberstart.outputs.cucumberstartts}}))s
+          echo "cucumberduration=$cucumberduration" >> $GITHUB_OUTPUT
 
       - name: Failure action Slack Notification
-        if: steps.demo_supervision.outcome == 'failure'
-        uses: rtCamp/action-slack-notify@v2.2.0
+        # must call always to avoid implicit call to success()
+        if: always() && steps.demo_supervision.outcome == 'failure'
         env:
           SLACK_WEBHOOK: ${{ secrets.SUPERVISION_CHANNEL_SLACK_WEBHOOK }}
           SLACK_MESSAGE: 'Cucumber Supervision Failure on demo platform (https://demo.gridsuite.org/gridexplore) :bell:'
+        uses: rtCamp/action-slack-notify@v2.2.0
 
-      - name: Failure exit
-        if: steps.demo_supervision.outcome == 'failure'
-        run: exit 1  # to mark the job as failed and red
+      - name: list watchdog messages
+        id: listwatchdog
+        if: always()
+        with:
+          method: chat.scheduledMessages.list
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          payload: |
+            channel: ${{ secrets.SLACK_CHANNEL_ID }}
+        uses: slackapi/slack-github-action@v2.0.0
+
+      - name: parse response of watchdog message list
+        id: parsewatchdogresponse
+        if: always() && steps.listwatchdog.outcome == 'success'
+        # assume we have only one message, to revisit if needed
+        # could filter on the text of the message (response is this:
+        # {
+        #   "ok": true,
+        #   "scheduled_messages": [
+        #     {
+        #       "id": "***",
+        #       "channel_id": "***",
+        #       "post_at": 1732699736,
+        #       "date_created": 1732698837,
+        #       "text": "Github Watchdog triggered, monitoring inactive since 15 minutes, please reenable github workflow or check for other errors."
+        #     },
+        #     {
+        #       "id": "Q083BU4QW8G",
+        #       "channel_id": "***",
+        #       "post_at": 1732699698,
+        #       "date_created": 1732698799,
+        #       "text": "Github Watchdog triggered, monitoring inactive since 15 minutes, please reenable github workflow or check for other errors."
+        #     }
+        #   ],
+        #   "response_metadata": {
+        #     "next_cursor": "",
+        #     "scopes": [
+        #       "chat:write",
+        #       "pins:read",
+        #       "pins:write"
+        #     ]
+        #   }
+        # }
+        #)
+        run: |
+          echo "watchdogid=${{ fromJson(steps.listwatchdog.outputs.response).scheduled_messages[0].id }}" >> $GITHUB_OUTPUT
+
+      - name: reschedule watchdog message in 15 minutes
+        id: nextwatchdog
+        # almost always schedule the watchdog (unless we don't know when to schedule, should never happen)
+        # this way we know if the next action doesn't execute because it would cancel the watchdog
+        if: always() && steps.prepare.outcome == 'success'
+        with:
+          method: chat.scheduleMessage
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          payload: |
+            channel: ${{ secrets.SLACK_CHANNEL_ID }}
+            post_at: ${{ steps.prepare.outputs.nextwatchdogts }}
+            text: "Github Supervision Watchdog triggered, monitoring inactive or encountering unforseen error since at least 15 minutes, please reenable github workflow or check for other errors: https://github.com/gridsuite/gridsuite-integration-test/actions/"
+        uses: slackapi/slack-github-action@v2.0.0
+
+      - name: Update the pinned message with status
+        # must call always to avoid implicit call to success()
+        if: always()
+        with:
+          method: chat.update
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          payload: |
+            channel: ${{ secrets.SLACK_CHANNEL_ID }}
+            ts: "${{ secrets.PINNED_TS }}"
+            text: "date=${{ steps.cucumberend.outputs.cucumberenddateutc }} was outcome=${{steps.demo_supervision.outcome}} (prepareduration=${{ steps.cucumberstart.outputs.prepareduration }}, cucumberduration=${{ steps.cucumberend.outputs.cucumberduration }}, nextwatchdog=${{steps.nextwatchdog.outcome}}@${{steps.prepare.outputs.nextwatchdogutc}})"
+        uses: slackapi/slack-github-action@v2.0.0
+
+      - name: delete previous watchdog message
+        # only delete current watchdog if everything was OK. this way the watchdog will trigger and someone will come looking at the source here
+        if: success() && steps.parsewatchdogresponse.outcome == 'success' && steps.parsewatchdogresponse.outputs.watchdogid != ''
+        with:
+          method: chat.deleteScheduledMessage
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          payload: |
+            channel: ${{ secrets.SLACK_CHANNEL_ID }}
+            scheduled_message_id: ${{ steps.parsewatchdogresponse.outputs.watchdogid }}
+        uses: slackapi/slack-github-action@v2.0.0
