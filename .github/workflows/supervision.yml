@@ -25,7 +25,7 @@ jobs:
         if: always()
         run: |
           echo "preparets=$(date +%s)" >> $GITHUB_OUTPUT
-          nextwatchdogts=$((60*15 + $(date +%s)))
+          nextwatchdogts=$((60*55 + $(date +%s)))
           echo "nextwatchdogts=$nextwatchdogts" >> $GITHUB_OUTPUT
           echo "nextwatchdogutc=$(date -d @$nextwatchdogts)" >> $GITHUB_OUTPUT
 
@@ -115,14 +115,14 @@ jobs:
         #       "channel_id": "***",
         #       "post_at": 1732699736,
         #       "date_created": 1732698837,
-        #       "text": "Github Watchdog triggered, monitoring inactive since 15 minutes, please reenable github workflow or check for other errors."
+        #       "text": "Github Watchdog triggered, monitoring inactive since 55 minutes, please reenable github workflow or check for other errors."
         #     },
         #     {
         #       "id": "Q083BU4QW8G",
         #       "channel_id": "***",
         #       "post_at": 1732699698,
         #       "date_created": 1732698799,
-        #       "text": "Github Watchdog triggered, monitoring inactive since 15 minutes, please reenable github workflow or check for other errors."
+        #       "text": "Github Watchdog triggered, monitoring inactive since 55 minutes, please reenable github workflow or check for other errors."
         #     }
         #   ],
         #   "response_metadata": {
@@ -138,10 +138,12 @@ jobs:
         run: |
           echo "watchdogid=${{ fromJson(steps.listwatchdog.outputs.response).scheduled_messages[0].id }}" >> $GITHUB_OUTPUT
 
-      - name: reschedule watchdog message in 15 minutes
+      - name: reschedule watchdog message in 55 minutes
         id: nextwatchdog
         # almost always schedule the watchdog (unless we don't know when to schedule, should never happen)
         # this way we know if the next action doesn't execute because it would cancel the watchdog
+        # if we don't schedule the watchdog, visiting the github actions page will show errors, and maybe
+        # even the pinned message will show that the watchdog was not scheduled
         if: always() && steps.prepare.outcome == 'success'
         with:
           method: chat.scheduleMessage
@@ -149,7 +151,7 @@ jobs:
           payload: |
             channel: ${{ secrets.SLACK_CHANNEL_ID }}
             post_at: ${{ steps.prepare.outputs.nextwatchdogts }}
-            text: "Github Supervision Watchdog triggered, monitoring inactive or encountering unforseen error since at least 15 minutes, please reenable github workflow or check for other errors: https://github.com/gridsuite/gridsuite-integration-test/actions/"
+            text: "Github Supervision Watchdog triggered, monitoring inactive or encountering unforseen error since at least 55 minutes, please reenable github workflow or check for other errors: https://github.com/gridsuite/gridsuite-integration-test/actions/"
         uses: slackapi/slack-github-action@v2.0.0
 
       - name: Update the pinned message with status
@@ -166,6 +168,9 @@ jobs:
 
       - name: delete previous watchdog message
         # only delete current watchdog if everything was OK. this way the watchdog will trigger and someone will come looking at the source here
+        # if we don't delete because of minor errors (e.g. updating the pinned message), watchdogs message will not all be cleared
+        # so one watchdog alert will be shown per errored run, even if the next runs work perfectly again (up to 5 since we schedule the watchdog for 55 minutes)
+        # if this happens to often we can change this code to clear all watchdog messages instead of one
         if: success() && steps.parsewatchdogresponse.outcome == 'success' && steps.parsewatchdogresponse.outputs.watchdogid != ''
         with:
           method: chat.deleteScheduledMessage
