@@ -3,7 +3,13 @@ name: Supervision
 on:
   workflow_dispatch:
   schedule:
-    - cron:  '0/10 * * * *'    # At every 10 minutes
+    # From GitHub's docs:
+    #   The schedule event can be delayed during periods of high loads of GitHub
+    #   Actions workflow runs. High load times include the start of every hour. If
+    #   the load is sufficiently high enough, some queued jobs may be dropped. To
+    #   decrease the chance of delay, schedule your workflow to run at a different
+    #   time of the hour.
+    - cron:  '7/10 * * * *'    # At every 10 minutes but avoid the rush at the start of the hour, instead start at 7
 
 jobs:
   cucumber_supervision_slack:
