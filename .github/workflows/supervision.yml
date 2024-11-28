@@ -29,6 +29,36 @@ jobs:
           echo "nextwatchdogts=$nextwatchdogts" >> $GITHUB_OUTPUT
           echo "nextwatchdogutc=$(date -d @$nextwatchdogts)" >> $GITHUB_OUTPUT
 
+      - name: Create key
+        id: createkey
+        if: always()
+        run: 'echo "$BASTION_KEY" > key; chmod 600 key'
+        env:
+          BASTION_KEY: ${{secrets.BASTION_KEY}}
+
+      - name: List non running pods
+        id: listnonrunningpods
+        # must call always to avoid implicit call to success()
+        if: always() && steps.createkey.outcome == 'success'
+        run: |
+          pods=$(ssh -o "StrictHostKeyChecking no" -i key ${{ secrets.BASTION_LOGIN }}@${{ secrets.BASTION_HOST }} kubectl get pods)
+          nonrunningpods=$(echo "$pods" | grep -v Completed | grep "0/[0-9]*" | grep -v " [0-9]s$" | grep -v " [0-9][0-9]s$") || true
+          echo "nonrunningpods=$nonrunningpods" >> $GITHUB_OUTPUT
+
+      - name: Check non running pods
+        id: checkpods
+        # must call always to avoid implicit call to success()
+        if: always() && steps.listnonrunningpods.outcome == 'success'
+        run: |
+          if [[ "${{steps.listnonrunningpods.outputs.nonrunningpods}}" != "" ]]; then
+            echo "error, existing nonrunningpods: ${{steps.listnonrunningpods.outputs.nonrunningpods}}"
+            exit 1
+          fi
+
+      - name: Delete key
+        if: always()
+        run: rm -f key
+
       - name: Set up JDK 11
         id: setupjdk
         # must call always to avoid implicit call to success()
@@ -63,6 +93,7 @@ jobs:
 
       - name: Get cucumber start unix timestamp
         id: cucumberstart
+        # must call always to avoid implicit call to success()
         if: always() && steps.prepare.outcome == 'success'
         run: |
           echo "cucumberstartts=$(date +%s)" >> $GITHUB_OUTPUT
@@ -86,7 +117,7 @@ jobs:
 
       - name: Failure action Slack Notification
         # must call always to avoid implicit call to success()
-        if: always() && steps.demo_supervision.outcome == 'failure'
+        if: always() && (steps.demo_supervision.outcome == 'failure' || steps.checkpods.outcome == 'failure')
         env:
           SLACK_WEBHOOK: ${{ secrets.SUPERVISION_CHANNEL_SLACK_WEBHOOK }}
           SLACK_MESSAGE: 'Cucumber Supervision Failure on demo platform (https://demo.gridsuite.org/gridexplore) :bell:'
@@ -104,6 +135,7 @@ jobs:
 
       - name: parse response of watchdog message list
         id: parsewatchdogresponse
+        # must call always to avoid implicit call to success()
         if: always() && steps.listwatchdog.outcome == 'success'
         # assume we have only one message, to revisit if needed
         # could filter on the text of the message (response is this:
@@ -144,6 +176,7 @@ jobs:
         # this way we know if the next action doesn't execute because it would cancel the watchdog
         # if we don't schedule the watchdog, visiting the github actions page will show errors, and maybe
         # even the pinned message will show that the watchdog was not scheduled
+        # must call always to avoid implicit call to success()
         if: always() && steps.prepare.outcome == 'success'
         with:
           method: chat.scheduleMessage
@@ -163,7 +196,7 @@ jobs:
           payload: |
             channel: ${{ secrets.SLACK_CHANNEL_ID }}
             ts: "${{ secrets.PINNED_TS }}"
-            text: "date=${{ steps.cucumberend.outputs.cucumberenddateutc }} was outcome=${{steps.demo_supervision.outcome}} (prepareduration=${{ steps.cucumberstart.outputs.prepareduration }}, cucumberduration=${{ steps.cucumberend.outputs.cucumberduration }}, nextwatchdog=${{steps.nextwatchdog.outcome}}@${{steps.prepare.outputs.nextwatchdogutc}})"
+            text: "date=${{ steps.cucumberend.outputs.cucumberenddateutc }} was cucumberoutcome=${{steps.demo_supervision.outcome}}, podsoutcome=${{steps.checkpods.outcome}} (prepareduration=${{ steps.cucumberstart.outputs.prepareduration }}, cucumberduration=${{ steps.cucumberend.outputs.cucumberduration }}, nextwatchdog=${{steps.nextwatchdog.outcome}}@${{steps.prepare.outputs.nextwatchdogutc}})"
         uses: slackapi/slack-github-action@v2.0.0
 
       - name: delete previous watchdog message
