@@ -200,11 +200,12 @@ jobs:
         uses: slackapi/slack-github-action@v2.0.0
 
       - name: delete previous watchdog message
-        # only delete current watchdog if everything was OK. this way the watchdog will trigger and someone will come looking at the source here
+        # only delete current watchdog if everything was OK (only check steps like demo_supervision and checkpods have failures that are OK
+        # (a failure for these steps means the deployment is failing, not the step)). this way the watchdog will trigger and someone will come looking at the source here
         # if we don't delete because of minor errors (e.g. updating the pinned message), watchdogs message will not all be cleared
         # so one watchdog alert will be shown per errored run, even if the next runs work perfectly again (up to 5 since we schedule the watchdog for 235 minutes)
         # if this happens to often we can change this code to clear all watchdog messages instead of one
-        if: success() && steps.parsewatchdogresponse.outcome == 'success' && steps.parsewatchdogresponse.outputs.watchdogid != ''
+        if: (success() || steps.demo_supervision.outcome == 'failure' || steps.checkpods.outcome == 'failure') && steps.parsewatchdogresponse.outcome == 'success' && steps.parsewatchdogresponse.outputs.watchdogid != ''
         with:
           method: chat.deleteScheduledMessage
           token: ${{ secrets.SLACK_BOT_TOKEN }}
