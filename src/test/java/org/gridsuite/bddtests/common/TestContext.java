@@ -7,8 +7,8 @@
 package org.gridsuite.bddtests.common;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import net.jodah.failsafe.Failsafe;
-import net.jodah.failsafe.RetryPolicy;
+import dev.failsafe.Failsafe;
+import dev.failsafe.RetryPolicy;
 import org.gridsuite.bddtests.directory.DirectoryRequests;
 import org.gridsuite.bddtests.explore.ExploreRequests;
 import org.gridsuite.bddtests.study.StudyRequests;
@@ -299,12 +299,13 @@ public class TestContext {
     // --------------------------------------------------------
     public String waitForElementCreation(String dirId, String elementType, String elementName) {
         // check element creation in target directory, and return its uuid
-        RetryPolicy<String> retryPolicyDirectory = new RetryPolicy<String>()
+        RetryPolicy<Object> retryPolicyDirectory = RetryPolicy.builder()
                 .withDelay(Duration.ofMillis(1000))
                 .withMaxRetries(MAX_WAITING_TIME_IN_SEC)
                 .onRetriesExceeded(e -> LOGGER.warn("Waiting time exceeded"))
-                .handleResult(null);
-        LOGGER.info("Wait for '{}' {} element creation in directory (max: {} sec)", elementName, elementType, retryPolicyDirectory.getMaxRetries());
+                .handleResult(null)
+                .build();
+        LOGGER.info("Wait for '{}' {} element creation in directory (max: {} sec)", elementName, elementType, retryPolicyDirectory.getConfig().getMaxRetries());
         String user = EnvProperties.getInstance().getUserName();
         return Failsafe.with(retryPolicyDirectory).get(() -> DirectoryRequests.getInstance().getElementId(user, dirId, elementType, elementName));
     }
@@ -319,25 +320,27 @@ public class TestContext {
 
         // check study creation completion
         final String sId = studyId;
-        RetryPolicy<Boolean> retryPolicyStudy = new RetryPolicy<Boolean>()
+        RetryPolicy<Object> retryPolicyStudy = RetryPolicy.builder()
                 .withDelay(Duration.ofMillis(1000))
                 .withMaxRetries(secondsTimeout)
                 .onRetriesExceeded(e -> LOGGER.warn("Waiting time exceeded"))
-                .handleResult(Boolean.FALSE);
-        LOGGER.info("Wait for '{}' study creation completion (max: {} sec)", studyName, retryPolicyStudy.getMaxRetries());
+                .handleResult(Boolean.FALSE)
+                .build();
+        LOGGER.info("Wait for '{}' study creation completion (max: {} sec)", studyName, retryPolicyStudy.getConfig().getMaxRetries());
         boolean studyExists = Failsafe.with(retryPolicyStudy).get(() -> StudyRequests.getInstance().existsStudy(sId));
         assertTrue("Study full creation not confirmed", studyExists);
 
         // make sure we can read the tree (existsStudy() can say "OK" because the study entity has been saved,
         // but the 2 default nodes may still be in creation)
         boolean ok = StudyRequests.getInstance().checkNodeTree(sId);
-        RetryPolicy<Boolean> retryPolicyTree = new RetryPolicy<Boolean>()
+        RetryPolicy<Object> retryPolicyTree = RetryPolicy.builder()
                 .withDelay(Duration.ofMillis(500))
                 .withMaxRetries(MAX_WAITING_TIME_IN_SEC)
                 .onRetriesExceeded(e -> LOGGER.warn("Waiting time exceeded"))
-                .handleResult(Boolean.FALSE);
-        LOGGER.info("Wait for '{}' default tree creation completion (max: {} sec)", studyName, retryPolicyStudy.getMaxRetries());
-        boolean treeExists = Failsafe.with(retryPolicyStudy).get(() -> StudyRequests.getInstance().checkNodeTree(sId));
+                .handleResult(Boolean.FALSE)
+                .build();
+        LOGGER.info("Wait for '{}' default tree creation completion (max: {} sec)", studyName, retryPolicyTree.getConfig().getMaxRetries());
+        boolean treeExists = Failsafe.with(retryPolicyTree).get(() -> StudyRequests.getInstance().checkNodeTree(sId));
         assertTrue("Study tree full creation not confirmed", treeExists);
 
     }
@@ -384,12 +387,13 @@ public class TestContext {
     public boolean waitForStatusMatching(String computationStatus, String studyNodeName, Computation compName, int timeoutInSeconds) {
         Node nodeIds = getNodeId(studyNodeName);
 
-        RetryPolicy<Boolean> retryPolicy = new RetryPolicy<Boolean>()
+        RetryPolicy<Object> retryPolicy = RetryPolicy.builder()
                 .withDelay(Duration.ofMillis(1000))
                 .withMaxRetries(timeoutInSeconds)
                 .onRetriesExceeded(e -> LOGGER.warn("Waiting time exceeded"))
-                .handleResult(Boolean.FALSE);
-        LOGGER.info("Wait for {} completion with status '{}' (max: {} sec)", compName.name(), computationStatus, retryPolicy.getMaxRetries());
+                .handleResult(Boolean.FALSE)
+                .build();
+        LOGGER.info("Wait for {} completion with status '{}' (max: {} sec)", compName.name(), computationStatus, retryPolicy.getConfig().getMaxRetries());
         return Failsafe.with(retryPolicy).get(() -> statusMatching(computationStatus, nodeIds.studyId, nodeIds.nodeId, compName));
     }
 
