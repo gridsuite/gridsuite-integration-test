@@ -10,13 +10,20 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <java.version>11</java.version>
-        <maven.compiler.version>3.3</maven.compiler.version>
-        <junit.version>4.13</junit.version>
-        <cucumber.version>7.3.4</cucumber.version>
-        <jackson-datatype.version>2.11.0</jackson-datatype.version>
-        <spring-boot.version>2.6.4</spring-boot.version>
-        <netty.version>4.1.75.Final</netty.version>
+        <java.version>21</java.version>
+        <maven.compiler.version>3.13.0</maven.compiler.version>
+        <junit.version>5.11.4</junit.version>
+        <cucumber.version>7.31.0</cucumber.version>
+        <jackson-datatype.version>2.18.0</jackson-datatype.version>
+        <spring-boot.version>3.4.9</spring-boot.version>
+        <spring-web.version>6.2.13</spring-web.version>
+        <logback.version>1.2.11</logback.version>
+        <log4j-over-slf4j.version>2.0.17</log4j-over-slf4j.version>
+        <postgresql.version>42.7.8</postgresql.version>
+        <nimbus-jose-jwt.version>10.6</nimbus-jose-jwt.version>
+        <failsafe.version>3.2.2</failsafe.version>
+        <oauth2-oidc-sdk.version>11.30.1</oauth2-oidc-sdk.version>
+        <selenium-java.version>4.38.0</selenium-java.version>
     </properties>
 
     <dependencies>
@@ -43,9 +50,10 @@
         </dependency>
 
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
             <version>${junit.version}</version>
+            <scope>test</scope>
         </dependency>
 
         <dependency>
@@ -64,65 +72,61 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <version>${spring-boot.version}</version>
             <scope>test</scope>
+            <!-- Without this exclusion, no tests are discovered by maven >= 3.9 on "mvn test" -->
+            <exclusions>
+                <exclusion>
+                    <groupId>org.junit.jupiter</groupId>
+                    <artifactId>junit-jupiter-engine</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-web</artifactId>
-            <version>5.3.16</version>
+            <version>${spring-web.version}</version>
         </dependency>
 
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
-            <version>1.2.11</version>
+            <version>${logback.version}</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>log4j-over-slf4j</artifactId>
-            <version>2.0.0-alpha6</version>
+            <version>${log4j-over-slf4j.version}</version>
             <scope>runtime</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-all</artifactId>
-            <version>${netty.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-resolver</artifactId>
-            <version>${netty.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.seleniumhq.selenium</groupId>
             <artifactId>selenium-java</artifactId>
-            <version>4.1.2</version>
+            <version>${selenium-java.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
-            <version>42.3.3</version>
+            <version>${postgresql.version}</version>
             <scope>runtime</scope>
         </dependency>
 
         <dependency>
             <groupId>com.nimbusds</groupId>
             <artifactId>nimbus-jose-jwt</artifactId>
-            <version>8.14</version>
+            <version>${nimbus-jose-jwt.version}</version>
         </dependency>
         <dependency>
             <groupId>com.nimbusds</groupId>
             <artifactId>oauth2-oidc-sdk</artifactId>
-            <version>7.3</version>
+            <version>${oauth2-oidc-sdk.version}</version>
         </dependency>
 
         <dependency>
-            <groupId>net.jodah</groupId>
+            <groupId>dev.failsafe</groupId>
             <artifactId>failsafe</artifactId>
-            <version>2.4.4</version>
+            <version>${failsafe.version}</version>
         </dependency>
 
 

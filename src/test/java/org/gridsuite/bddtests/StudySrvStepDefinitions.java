@@ -17,8 +17,8 @@ import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
-import net.jodah.failsafe.Failsafe;
-import net.jodah.failsafe.RetryPolicy;
+import dev.failsafe.Failsafe;
+import dev.failsafe.RetryPolicy;
 import org.gridsuite.bddtests.actions.ActionsRequests;
 import org.gridsuite.bddtests.cases.CaseRequests;
 import org.gridsuite.bddtests.common.TestContext;
@@ -108,12 +108,13 @@ public class StudySrvStepDefinitions {
 
         // check case creation completion
         final String cId = caseId;
-        RetryPolicy<Boolean> retryPolicyStudy = new RetryPolicy<Boolean>()
+        RetryPolicy<Object> retryPolicyStudy = RetryPolicy.builder()
                 .withDelay(Duration.ofMillis(1000))
                 .withMaxRetries(TestContext.MAX_WAITING_TIME_IN_SEC)
                 .onRetriesExceeded(e -> LOGGER.warn("Waiting time exceeded"))
-                .handleResult(Boolean.FALSE);
-        LOGGER.info("Wait for '{}' case creation completion (max: {} sec)", caseName, retryPolicyStudy.getMaxRetries());
+                .handleResult(Boolean.FALSE)
+                .build();
+        LOGGER.info("Wait for '{}' case creation completion (max: {} sec)", caseName, retryPolicyStudy.getConfig().getMaxRetries());
         boolean studyExists = Failsafe.with(retryPolicyStudy).get(() -> CaseRequests.getInstance().existsCase(cId));
         assertTrue("Case full creation not confirmed", studyExists);
 
