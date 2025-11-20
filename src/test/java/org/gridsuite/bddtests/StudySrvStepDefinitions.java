@@ -188,8 +188,7 @@ public class StudySrvStepDefinitions {
     }
 
     private void createStudyFromFile(String studyName, String directoryName, Path filePath) {
-        String dirId = ctx.getDirId(directoryName);
-        final String description = "STEP create_study_in_directory_from_file";
+        ctx.getDirId(directoryName);
         String user = EnvProperties.getInstance().getUserName();
         // 1: import case
         String caseId = CaseRequests.getInstance().createCaseFromFile(filePath, user);

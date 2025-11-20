@@ -259,11 +259,11 @@ public final class EnvProperties {
                         .defaultCodecs()
                         .maxInMemorySize(16 * 1024 * 1024));
 
-        String token = getToken();
-        if (token == null) {
+        String localToken = getToken();
+        if (localToken == null) {
             LOGGER.info("getWebClient '{}'", serverUrl);
         } else {
-            builder.defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + token);
+            builder.defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + localToken);
             LOGGER.info("getWebClient with bearer '{}'", serverUrl);
         }
         return builder.build();

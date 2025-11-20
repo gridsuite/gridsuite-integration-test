@@ -29,7 +29,7 @@ public final class CaseRequests {
     }
 
     private static CaseRequests INSTANCE = null;
-    private WebClient webClient;
+    private final WebClient webClient;
     private final String version = "v1";
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CaseRequests.class);
@@ -82,7 +82,7 @@ public final class CaseRequests {
                 .bodyToMono(String.class)
                 .doOnNext(
                         s -> {
-                            LOGGER.info("existsCase '{}'", s.toString());
+                            LOGGER.info("existsCase '{}'", s);
                             exists[0] = s.equalsIgnoreCase("true");
                         }
                 ).block();
