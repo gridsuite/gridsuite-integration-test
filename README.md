@@ -57,7 +57,6 @@ mvn test
 Features can be run on different platforms:
 - local: all REST calls are sent to localhost (no SSO token required), or using the gateway (SSO token required)
 - dev-master: calls are made on the gateway at https://dev-master.gridsuite.rte-france.com/gridexplore (SSO token required)
-- recette : idem on https://recette.gridsuite.rte-france.com/gridexplore
 - demo : Azure public platform using https://demo.gridsuite.org/gridexplore
 
 
@@ -92,7 +91,7 @@ mvn test -Dcucumber.features=@bddtests_failure_to_rerun.txt
 
 Random: a test must not depend from a given order. To randomize:
 ```
-mvn test -Dcucumber.filter.tags=@tagExample -Dusing_platform=recette -Dcucumber.execution.order=random
+mvn test -Dcucumber.filter.tags=@tagExample -Dusing_platform=demo -Dcucumber.execution.order=random
 ```
 
 Dry-run: no effect run
