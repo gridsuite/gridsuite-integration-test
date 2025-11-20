@@ -1,9 +1,3 @@
-/*
-  Copyright (c) 2022, RTE (http://www.rte-france.com)
-  This Source Code Form is subject to the terms of the Mozilla Public
-  License, v. 2.0. If a copy of the MPL was not distributed with this
-  file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
 package org.gridsuite.bddtests.directory;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -18,6 +12,8 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Flux;
+
+import java.util.List;
 
 public final class DirectoryRequests {
 
@@ -35,7 +31,7 @@ public final class DirectoryRequests {
     private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryRequests.class);
 
     private DirectoryRequests() {
-        webClient = EnvProperties.getInstance().getWebClient(EnvProperties.MicroService.DirectoryServer);
+        webClient = EnvProperties.getInstance().getWebClient(EnvProperties.MicroService.DIRECTORY_SERVER);
     }
 
     private Flux<DirectoryElement> requestRootDirectory(String userId) {
@@ -71,18 +67,18 @@ public final class DirectoryRequests {
 
         // iterate through the stream
         DirectoryRequests.getInstance().requestRootDirectory(userId).doOnNext(
-            dir -> LOGGER.info("getRootDirectoryId '{}'", dir.toString())
-        )
-        .takeUntil(dir -> {
-                if (dir.getElementName().equalsIgnoreCase(directoryName)) {
-                    dirId[0] = dir.getElementUuid();
-                    return true;    // exit condition (flux disposal)
-                } else {
-                    return false;
-                }
-        }
-        )
-        .blockLast(); // this is a blocking subscribe
+                        dir -> LOGGER.info("getRootDirectoryId '{}'", dir)
+                )
+                .takeUntil(dir -> {
+                            if (dir.getElementName().equalsIgnoreCase(directoryName)) {
+                                dirId[0] = dir.getElementUuid();
+                                return true;    // exit condition (flux disposal)
+                            } else {
+                                return false;
+                            }
+                        }
+                )
+                .blockLast(); // this is a blocking subscribe
         return dirId[0];
     }
 
@@ -95,9 +91,7 @@ public final class DirectoryRequests {
                 .header("userId", userId)
                 .retrieve()
                 .bodyToFlux(DirectoryElement.class)
-                .doOnNext(
-                        elt -> LOGGER.info("getElementId '{}'", elt.toString())
-                )
+                .doOnNext(elt -> LOGGER.info("getElementId '{}'", elt))
                 .takeUntil(elt -> {
                             if (elt.getElementName().equalsIgnoreCase(elementName)
                                     && elt.getType().equalsIgnoreCase(elementType)) {
@@ -112,16 +106,13 @@ public final class DirectoryRequests {
         return eltId[0];
     }
 
-    public String createRootDirectory(String dirName, String user, boolean isPrivate, String desc) {
+    public String createRootDirectory(String dirName, String user, String desc) {
         // create body (json tree)
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode body = mapper.createObjectNode();
         body.put("elementName", dirName);
         body.put("owner", user);
         body.put("description", desc);
-        ObjectNode rightNode = mapper.createObjectNode();
-        rightNode.put("isPrivate", String.valueOf(isPrivate));
-        body.set("accessRights", rightNode);
 
         String jsonResponse = webClient.post()
                 .uri("root-directories")
@@ -186,27 +177,7 @@ public final class DirectoryRequests {
                 .block();
     }
 
-    public void updateDirectoryRights(String dirId, boolean isPrivate, String owner) {
-        String path = UriComponentsBuilder.fromPath("elements/{eltId}")
-                .buildAndExpand(dirId)
-                .toUriString();
-
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode body = mapper.createObjectNode();
-        ObjectNode rightNode = mapper.createObjectNode();
-        rightNode.put("isPrivate", String.valueOf(isPrivate));
-        body.set("accessRights", rightNode);
-
-        webClient.put()
-                .uri(path)
-                .header("userId", owner)
-                .body(BodyInserters.fromValue(body.toString()))
-                .retrieve()
-                .bodyToMono(String.class)
-                .block();
-    }
-
-    public String createDirectory(String dirName, String parentId, boolean isPrivate, String owner) {
+    public String createDirectory(String dirName, String parentId, String owner) {
         // create body (json tree)
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode body = mapper.createObjectNode();
@@ -214,10 +185,6 @@ public final class DirectoryRequests {
         body.put("owner", owner);
         body.put("type", "DIRECTORY");
         body.putNull("elementUuid");
-        //body.put("description", "desc");
-        ObjectNode rightNode = mapper.createObjectNode();
-        rightNode.put("isPrivate", String.valueOf(isPrivate));
-        body.set("accessRights", rightNode);
 
         String jsonResponse = webClient.post()
                 .uri("directories/" + parentId + "/elements")
@@ -239,15 +206,16 @@ public final class DirectoryRequests {
         return null;
     }
 
-    public int moveElement(String elementId, String dirId, String owner) {
-        String path = UriComponentsBuilder.fromPath("elements/{eltId}?newDirectory={targetDirId}")
-                .buildAndExpand(elementId, dirId)
+    public int moveElement(List<String> elementId, String dirId, String owner) {
+        String path = UriComponentsBuilder.fromPath("elements?targetDirectoryUuid={targetDirId}")
+                .buildAndExpand(dirId)
                 .toUriString();
         LOGGER.info("moveElement path= '{}'", path);
         try {
             webClient.put()
                     .uri(path)
                     .header("userId", owner)
+                    .bodyValue(elementId)
                     .retrieve()
                     .bodyToMono(String.class)
                     .block();

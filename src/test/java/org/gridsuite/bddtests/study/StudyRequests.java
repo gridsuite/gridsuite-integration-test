@@ -1,9 +1,3 @@
-/*
-  Copyright (c) 2022, RTE (http://www.rte-france.com)
-  This Source Code Form is subject to the terms of the Mozilla Public
-  License, v. 2.0. If a copy of the MPL was not distributed with this
-  file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
 package org.gridsuite.bddtests.study;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -11,20 +5,17 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.gridsuite.bddtests.common.EnvProperties;
+import org.gridsuite.bddtests.modifications.ModificationsRequests;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.web.util.UriComponentsBuilder;
-import reactor.core.publisher.Flux;
-import java.nio.file.Path;
-import java.util.Iterator;
-import static java.nio.file.StandardOpenOption.CREATE;
+
+import java.util.*;
 
 public final class StudyRequests {
 
@@ -42,7 +33,7 @@ public final class StudyRequests {
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyRequests.class);
 
     private StudyRequests() {
-        webClient = EnvProperties.getInstance().getWebClient(EnvProperties.MicroService.StudyServer);
+        webClient = EnvProperties.getInstance().getWebClient(EnvProperties.MicroService.STUDY_SERVER);
     }
 
     public boolean existsStudy(String studyId) {
@@ -67,9 +58,12 @@ public final class StudyRequests {
             return node;
         }
         if (node.has("children")) {
-            for (Iterator<JsonNode> it = node.get("children").elements(); it.hasNext();) {
+            for (Iterator<JsonNode> it = node.get("children").elements(); it.hasNext(); ) {
                 JsonNode subNode = it.next();
-                return findNodeInTree(subNode, studyNodeIdentifier, identifierKey);
+                JsonNode result = findNodeInTree(subNode, studyNodeIdentifier, identifierKey);
+                if (result != null) {
+                    return result;
+                }
             }
         }
         return null;
@@ -77,20 +71,21 @@ public final class StudyRequests {
 
     public String getNodeId(String studyId, String studyNodeName) {
         String nodeId = null;
-        JsonNode node = getNodeData(studyId, studyNodeName, "name");
+        JsonNode node = getNodeData(studyId, Optional.empty(), studyNodeName, "name");
         if (node != null && node.has("id")) {
             nodeId = node.get("id").asText();
         }
         return nodeId;
     }
 
-    public JsonNode getNodeData(String studyId, String studyNodeIdentifier, String identifierKey) {
+    public JsonNode getNodeData(String studyId, Optional<String> rootNetworkUuid, String studyNodeIdentifier, String identifierKey) {
         JsonNode wantedNode;
         ObjectMapper mapper = new ObjectMapper();
         JsonNode rootNode;
         final String[] jsonString = {null};
 
         String path = UriComponentsBuilder.fromPath("studies/{studyId}/tree")
+                .queryParamIfPresent("rootNetworkUuid", rootNetworkUuid)
                 .buildAndExpand(studyId)
                 .toUriString();
 
@@ -114,6 +109,61 @@ public final class StudyRequests {
         return wantedNode;
     }
 
+    public String builtStatus(String studyId, String rootNetworkUuid, String studyNodeId) {
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode node;
+        String built = null;
+
+        String path = UriComponentsBuilder.fromPath("studies/{studyId}/tree/nodes/{id}")
+                .queryParam("rootNetworkUuid", rootNetworkUuid)
+                .buildAndExpand(studyId, studyNodeId)
+                .toUriString();
+
+        String jsonString = webClient.get()
+                .uri(path)
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
+
+        try {
+            node = mapper.readTree(jsonString);
+            if (node != null && node.has("nodeBuildStatus") && node.get("nodeBuildStatus").has("localBuildStatus")) {
+                built = node.get("nodeBuildStatus").get("localBuildStatus").asText();
+            }
+        } catch (JsonProcessingException je) {
+            return null;
+        }
+        return built;
+    }
+
+    public String getFirstRootNetworkId(String studyId) {
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode rootNode;
+        final String[] jsonString = {null};
+        String path = UriComponentsBuilder.fromPath("studies/{studyId}/root-networks")
+                .buildAndExpand(studyId)
+                .toUriString();
+
+        webClient.get()
+                .uri(path)
+                .retrieve()
+                .bodyToMono(String.class)
+                .doOnNext(
+                        s -> {
+                            LOGGER.info("getFirstRootNetwork '{}'", s);
+                            jsonString[0] = s;
+                        }
+                ).block();
+
+        try {
+            rootNode = mapper.readTree(jsonString[0]);
+            return rootNode.elements().next().get("rootNetworkUuid").asText();
+        } catch (JsonProcessingException je) {
+            return null;
+        }
+    }
+
+
     public boolean checkNodeTree(String studyId) {
         boolean ok;
         // Just need the HEAD query and a proper 200 http return code
@@ -122,8 +172,8 @@ public final class StudyRequests {
                 .toUriString();
         try {
             WebClient.ResponseSpec response = webClient.head()
-                .uri(path)
-                .retrieve();
+                    .uri(path)
+                    .retrieve();
             ok = HttpStatus.OK == response.toBodilessEntity().block().getStatusCode();
         } catch (Exception e) {
             ok = false;
@@ -131,41 +181,10 @@ public final class StudyRequests {
         return ok;
     }
 
-    // TODO not used
-    public Equipment searchEqt(String studyId, String nodeId, String searchInput, String fieldSelector, boolean inUpstreamBuiltParentNode, String euipmentType) {
-        final Equipment[] foundEquipment = {null};
+    public JsonNode searchEquipment(String studyId, String rootNetworkUuid, String nodeId, String searchInput, String fieldSelector, boolean inUpstreamBuiltParentNode, String equipmentType) {
 
-        String path = UriComponentsBuilder.fromPath("studies/{studyId}/nodes/{nodeId}/search?userInput={searchInput}&fieldSelector={fieldSelector}&inUpstreamBuiltParentNode={up}&equipmentType={eltType}")
-                .buildAndExpand(studyId, nodeId, searchInput, fieldSelector, inUpstreamBuiltParentNode, euipmentType)
-                .toUriString();
-        LOGGER.info("searchEqt uri: '{}'", path);
-
-        // iterate through the stream, looking for first exact matching
-        webClient.get()
-                .uri(path)
-                .retrieve()
-                .bodyToFlux(Equipment.class)
-                .doOnNext(
-                        equipment -> LOGGER.info("searchEquipment '{}'", equipment.toString())
-                )
-                .takeUntil(equipment -> {
-                            if (equipment.getIdentifier(fieldSelector).equalsIgnoreCase(searchInput)) {
-                                foundEquipment[0] = equipment;
-                                return true;    // exit condition (flux disposal)
-                            } else {
-                                return false;
-                            }
-                        }
-                )
-                .blockLast(); // this is a blocking subscribe
-
-        return foundEquipment[0];
-    }
-
-    public JsonNode searchEquipment(String studyId, String nodeId, String searchInput, String fieldSelector, boolean inUpstreamBuiltParentNode, String equipmentType) {
-
-        String path = UriComponentsBuilder.fromPath("studies/{studyId}/nodes/{nodeId}/search?userInput={searchInput}&fieldSelector={fieldSelector}&inUpstreamBuiltParentNode={up}")
-                .buildAndExpand(studyId, nodeId, searchInput, fieldSelector, inUpstreamBuiltParentNode)
+        String path = UriComponentsBuilder.fromPath("studies/{studyId}/root-networks/{rootNetworkUuid}/nodes/{nodeId}/search?userInput={searchInput}&fieldSelector={fieldSelector}&inUpstreamBuiltParentNode={up}")
+                .buildAndExpand(studyId, rootNetworkUuid, nodeId, searchInput, fieldSelector, inUpstreamBuiltParentNode)
                 .toUriString();
         if (!equipmentType.isEmpty()) {
             String pathWithType = UriComponentsBuilder.fromPath("&equipmentType={eltType}")
@@ -193,60 +212,41 @@ public final class StudyRequests {
         return null;
     }
 
-    private JsonNode getNetworkMapData(String path, String equipmentId) {
-        final String[] jsonString = {null};
-
-        // retrieve Json raw data as string
-        webClient.get()
+    public JsonNode getEquipmentData(String studyId, String rootNetworkUuid, String nodeId, String equipmentType, String equipmentId, String infoType) {
+        // this request should return a single element with equipmentId
+        String path = UriComponentsBuilder.fromPath("studies/{studyId}/root-networks/{rootNetworkUuid}/nodes/{nodeId}//network/elements/{elementId}?elementType={equipmentType}&infoType={infoType}&inUpstreamBuiltParentNode=false")
+                .buildAndExpand(studyId, rootNetworkUuid, nodeId, equipmentId, equipmentType, infoType)
+                .toUriString();
+        LOGGER.info("getEquipmentData Uri: '{}'", path);
+        String jsonResponse = webClient.get()
                 .uri(path)
                 .retrieve()
                 .bodyToMono(String.class)
-                .doOnNext(
-                        s -> {
-                            LOGGER.info("getNetworkMapData '{}'", s);
-                            jsonString[0] = s;
-                        }
-                ).block();
-
-        // parse Json data
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            if (jsonString[0] != null) {
-                JsonNode rootNode = mapper.readTree(jsonString[0]);
-                // single element or list of elements ?
-                if (!rootNode.isArray()) {
-                    if (rootNode.has("id") && rootNode.get("id").asText().equalsIgnoreCase(equipmentId)) {
-                        return rootNode;
-                    }
-                } else {
-                    for (Iterator<JsonNode> it = rootNode.elements(); it.hasNext(); ) {
-                        JsonNode eltNode = it.next();
-                        if (eltNode.has("id") && eltNode.get("id").asText().equalsIgnoreCase(equipmentId)) {
-                            return eltNode;
-                        }
-                    }
-                }
+                .block();
+        if (jsonResponse != null) {
+            LOGGER.info("getEquipmentData resp: '{}'", jsonResponse);
+            try {
+                ObjectMapper mapper = new ObjectMapper();
+                return mapper.readTree(jsonResponse);
+            } catch (JsonProcessingException je) {
+                return null;
             }
-        } catch (JsonProcessingException je) {
-            return null;
         }
         return null;
     }
 
-    public JsonNode getEquipmentData(String studyId, String nodeId, String equipmentType, String equipmentId, boolean inUpstreamBuiltParentNode) {
-        // this request should return a single element with equipmentId
-        String path = UriComponentsBuilder.fromPath("studies/{studyId}/nodes/{nodeId}/network-map/" + equipmentType + "/{eqptId}?inUpstreamBuiltParentNode={up}")
-                .buildAndExpand(studyId, nodeId, equipmentId, inUpstreamBuiltParentNode)
+    // this is used for monitoring only, we don't return anything to prevent DataBufferLimitException due to very large returned JSON
+    public void getAllEquipmentsData(String studyId, String rootNetworkUuid, String nodeId, String equipmentType, String infoType) {
+        // this request should return all elements of type equipmentType
+        String path = UriComponentsBuilder.fromPath("studies/{studyId}/root-networks/{rootNetworkUuid}/nodes/{nodeId}/network/elements?elementType={equipmentType}&infoType={infoType}")
+                .buildAndExpand(studyId, rootNetworkUuid, nodeId, equipmentType, infoType)
                 .toUriString();
-        return getNetworkMapData(path, equipmentId);
-    }
-
-    public JsonNode getEquipmentData(String studyId, String nodeId, String equipmentType, String equipmentId, String substationId) {
-        // this request may return N elements with a given stationId, then we'll have to search for the element having equipmentId
-        String path = UriComponentsBuilder.fromPath("studies/{studyId}/nodes/{nodeId}/network-map/" + equipmentType + "?substationId={station}")
-                .buildAndExpand(studyId, nodeId, substationId)
-                .toUriString();
-        return getNetworkMapData(path, equipmentId);
+        LOGGER.info("getAllEquipmentsData Uri: '{}'", path);
+        webClient.post()
+                .uri(path)
+                .retrieve()
+                .toBodilessEntity()
+                .block();
     }
 
     public void updateSwitch(String switchId, String studyId, String nodeId, boolean openState) {
@@ -266,21 +266,67 @@ public final class StudyRequests {
 
         webClient.post()
                 .uri(path)
+                .header("userId", EnvProperties.getInstance().getUserName())
                 .body(BodyInserters.fromValue(body.toString()))
                 .retrieve()
                 .bodyToMono(String.class)
                 .block();
     }
 
-    public void runLoadFlow(String studyId, String nodeId) {
+    public void buildNode(String studyId, String rootNetworkUuid, String nodeId) {
         String path = UriComponentsBuilder.fromPath(
-                        "studies/{studyId}/nodes/{nodeUuid}/loadflow/run")
-                .buildAndExpand(studyId, nodeId)
+                        "studies/{studyId}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/build")
+                .buildAndExpand(studyId, rootNetworkUuid, nodeId)
+                .toUriString();
+        LOGGER.info("buildNode uri: '{}'", path);
+
+        webClient.post()
+                .uri(path)
+                .header("userId", EnvProperties.getInstance().getUserName())
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
+    }
+
+    public void unbuildNode(String studyId, String rootNetworkUuid, String nodeId) {
+        String path = UriComponentsBuilder.fromPath(
+                        "studies/{studyId}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/unbuild")
+                .buildAndExpand(studyId, rootNetworkUuid, nodeId)
+                .toUriString();
+        LOGGER.info("unbuildNode uri: '{}'", path);
+
+        webClient.post()
+                .uri(path)
+                .header("userId", EnvProperties.getInstance().getUserName())
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
+    }
+
+    public void runLoadFlow(String studyId, String rootNetworkUuid, String nodeId, int limitReduction) {
+        String path = UriComponentsBuilder.fromPath(
+                        "studies/{studyId}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run?limitReduction={limitReduction}")
+                .buildAndExpand(studyId, rootNetworkUuid, nodeId, limitReduction / 100.)
                 .toUriString();
         LOGGER.info("runLoadFlow uri: '{}'", path);
 
         webClient.put()
                 .uri(path)
+                .header("userId", EnvProperties.getInstance().getUserName())
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
+    }
+
+    public void setComputationParameters(String studyId, String computationName, String resourceFileContent) {
+        String path = UriComponentsBuilder.fromPath("studies/{studyId}/{computationName}/parameters")
+                .buildAndExpand(studyId, computationName)
+                .toUriString();
+        LOGGER.info("setComputationParameters uri: '{}'", path);
+        webClient.post()
+                .uri(path)
+                .header("userId", EnvProperties.getInstance().getUserName())
+                .body(BodyInserters.fromValue(resourceFileContent))
                 .retrieve()
                 .bodyToMono(String.class)
                 .block();
@@ -295,15 +341,16 @@ public final class StudyRequests {
 
         webClient.post()
                 .uri(path)
+                .header("userId", EnvProperties.getInstance().getUserName())
                 .body(BodyInserters.fromValue(provider))// body contains only the provider name
                 .retrieve()
                 .bodyToMono(String.class)
                 .block();
     }
 
-    public String getLoadFlowInfos(String studyId, String nodeId) {
-        String path = UriComponentsBuilder.fromPath("studies/{studyId}/nodes/{nodeId}/loadflow/status")
-                .buildAndExpand(studyId, nodeId)
+    public String getLoadFlowInfos(String studyId, String rootNetworkUuid, String nodeId) {
+        String path = UriComponentsBuilder.fromPath("studies/{studyId}/root-networks/{rootNetworkUuid}/nodes/{nodeId}/loadflow/status")
+                .buildAndExpand(studyId, rootNetworkUuid, nodeId)
                 .toUriString();
         LOGGER.info("getLoadFlowInfos uri: '{}'", path);
         String status = webClient.get()
@@ -314,9 +361,9 @@ public final class StudyRequests {
         return status == null ? "NOT_DONE" : status;
     }
 
-    public String getSecurityAnalysisStatus(String studyId, String nodeId) {
-        String path = UriComponentsBuilder.fromPath("studies/{studyId}/nodes/{nodeId}/security-analysis/status")
-                .buildAndExpand(studyId, nodeId)
+    public String getSecurityAnalysisStatus(String studyId, String rootNetworkUuid, String nodeId) {
+        String path = UriComponentsBuilder.fromPath("studies/{studyId}/root-networks/{rootNetworkUuid}/nodes/{nodeId}/security-analysis/status")
+                .buildAndExpand(studyId, rootNetworkUuid, nodeId)
                 .toUriString();
         return webClient.get()
                 .uri(path)
@@ -325,9 +372,9 @@ public final class StudyRequests {
                 .block();
     }
 
-    public JsonNode getSecurityAnalysisResult(String studyId, String nodeId) {
-        String path = UriComponentsBuilder.fromPath("studies/{studyId}/nodes/{nodeId}/security-analysis/result")
-                .buildAndExpand(studyId, nodeId)
+    public JsonNode getSecurityAnalysisResult(String studyId, String rootNetworkUuid, String nodeId, String resultTypeQuery) {
+        String path = UriComponentsBuilder.fromPath("studies/{studyId}/root-networks/{rootNetworkUuid}/nodes/{nodeId}/security-analysis/result?resultType={resultTypeQuery}")
+                .buildAndExpand(studyId, rootNetworkUuid, nodeId, resultTypeQuery)
                 .toUriString();
         LOGGER.info("getSecurityAnalysisResult uri: '{}'", path);
         String jsonResponse = webClient.get()
@@ -335,7 +382,7 @@ public final class StudyRequests {
                 .retrieve()
                 .bodyToMono(String.class)
                 .block();
-        //LOGGER.info("getSecurityAnalysisResult resp: '{}'", jsonResponse);
+        LOGGER.info("getSecurityAnalysisResult resp: '{}'", jsonResponse);
         // parse Json data
         if (jsonResponse != null) {
             try {
@@ -348,10 +395,109 @@ public final class StudyRequests {
         return null;
     }
 
-    public JsonNode contingencyCount(String studyId, String nodeId, String listId) {
-        String path = UriComponentsBuilder.fromPath("studies/{studyId}/nodes/{nodeId}/contingency-count?contingencyListName={listId}")
-            .buildAndExpand(studyId, nodeId, listId)
-            .toUriString();
+    public JsonNode getSld(String studyId, String rootNetworkUuid, String nodeId, String vlName) {
+        String path = UriComponentsBuilder.fromPath("studies/{studyId}/root-networks/{rootNetworkUuid}/nodes/{nodeId}/network/voltage-levels/{vlName}/svg-and-metadata?useName=true&centerLabel=false&diagonalLabel=true&topologicalColoring=true&sldDisplayMode=STATE_VARIABLE&language=fr")
+                .buildAndExpand(studyId, rootNetworkUuid, nodeId, vlName)
+                .toUriString();
+        LOGGER.info("getSld uri: '{}'", path);
+        String jsonResponse = webClient.get()
+                .uri(path)
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
+        LOGGER.info("getSld resp: '{}'", jsonResponse);
+        // parse Json data
+        if (jsonResponse != null) {
+            try {
+                ObjectMapper mapper = new ObjectMapper();
+                return mapper.readTree(jsonResponse);
+            } catch (JsonProcessingException je) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    public JsonNode getNad(String studyId, String rootNetworkUuid, String nodeId, List<String> vlList) {
+        String path = UriComponentsBuilder.fromPath("studies/{studyId}/root-networks/{rootNetworkUuid}/nodes/{nodeId}/network-area-diagram")
+                .buildAndExpand(studyId, rootNetworkUuid, nodeId).toUriString();
+
+        LOGGER.info("getNad uri: '{}'", path);
+        Map<String, Object> requestBody = Map.of(
+                "voltageLevelIds", vlList,
+                "nadPositionsGenerationMode", "GEOGRAPHICAL_COORDINATES");
+
+        String jsonResponse = webClient.post()
+                .uri(path)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(requestBody)
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
+
+        LOGGER.info("getNad resp: '{}'", jsonResponse);
+        // parse Json data
+        if (jsonResponse != null) {
+            try {
+                ObjectMapper mapper = new ObjectMapper();
+                return mapper.readTree(jsonResponse);
+            } catch (JsonProcessingException je) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    public JsonNode getLoadFlowResult(String studyId, String rootNetworkUuid, String nodeId) {
+        String path = UriComponentsBuilder.fromPath("studies/{studyId}/root-networks/{rootNetworkUuid}/nodes/{nodeId}/loadflow/result")
+                .buildAndExpand(studyId, rootNetworkUuid, nodeId)
+                .toUriString();
+        LOGGER.info("getLoadFlowResult uri: '{}'", path);
+        String jsonResponse = webClient.get()
+                .uri(path)
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
+        LOGGER.info("getLoadFlowResult resp: '{}'", jsonResponse);
+        // parse Json data
+        if (jsonResponse != null) {
+            try {
+                ObjectMapper mapper = new ObjectMapper();
+                return mapper.readTree(jsonResponse);
+            } catch (JsonProcessingException je) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    public JsonNode getLimitViolationsResult(String studyId, String rootNetworkUuid, String nodeId) {
+        String path = UriComponentsBuilder.fromPath("studies/{studyId}/root-networks/{rootNetworkUuid}/nodes/{nodeId}/limit-violations")
+                .buildAndExpand(studyId, rootNetworkUuid, nodeId)
+                .toUriString();
+        LOGGER.info("getLimitViolationsResult uri: '{}'", path);
+        String jsonResponse = webClient.get()
+                .uri(path)
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
+        LOGGER.info("getLimitViolationsResult resp: '{}'", jsonResponse);
+        // parse Json data
+        if (jsonResponse != null) {
+            try {
+                ObjectMapper mapper = new ObjectMapper();
+                return mapper.readTree(jsonResponse);
+            } catch (JsonProcessingException je) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    public JsonNode contingencyCount(String studyId, String rootNetworkUuid, String nodeId, String listId) {
+        String path = UriComponentsBuilder.fromPath("studies/{studyId}/root-networks/{rootNetworkUuid}/nodes/{nodeId}/contingency-count?contingencyListName={listId}")
+                .buildAndExpand(studyId, rootNetworkUuid, nodeId, listId)
+                .toUriString();
         LOGGER.info("contingencyCount uri: '{}'", path);
         String jsonResponse = webClient.get()
                 .uri(path)
@@ -365,13 +511,14 @@ public final class StudyRequests {
         return result;
     }
 
-    public void runSecurityAnalysis(String studyId, String nodeId, String listId) {
-        String path = UriComponentsBuilder.fromPath("studies/{studyId}/nodes/{nodeId}/security-analysis/run?contingencyListName={listId}")
-                .buildAndExpand(studyId, nodeId, listId)
+    public void runSecurityAnalysis(String studyId, String rootNetworkUuid, String nodeId, String listId) {
+        String path = UriComponentsBuilder.fromPath("studies/{studyId}/root-networks/{rootNetworkUuid}/nodes/{nodeId}/security-analysis/run?contingencyListName={listId}")
+                .buildAndExpand(studyId, rootNetworkUuid, nodeId, listId)
                 .toUriString();
         LOGGER.info("runSecurityAnalysis uri: '{}'", path);
         String jsonResponse = webClient.post()
                 .uri(path)
+                .header("userId", EnvProperties.getInstance().getUserName())
                 .retrieve()
                 .bodyToMono(String.class)
                 .block();
@@ -379,48 +526,146 @@ public final class StudyRequests {
     }
 
     public void deleteEquipment(String studyId, String nodeId, String eqptDeleteType, String equipmentId) {
-        String path = UriComponentsBuilder.fromPath("studies/{studyId}/nodes/{nodeId}/network-modification/equipments/type/{eqptType}/id/{eqptId}")
-                .buildAndExpand(studyId, nodeId, eqptDeleteType, equipmentId)
+        String path = UriComponentsBuilder.fromPath(
+                        "studies/{studyId}/nodes/{nodeId}/network-modifications")
+                .buildAndExpand(studyId, nodeId)
                 .toUriString();
         LOGGER.info("deleteEquipment uri: '{}'", path);
-        webClient.delete()
+        // create body
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode body = mapper.createObjectNode();
+        body.put("type", "EQUIPMENT_DELETION");
+        body.put("equipmentId", equipmentId);
+        body.put("equipmentType", eqptDeleteType);
+        webClient.post()
                 .uri(path)
+                .header("userId", EnvProperties.getInstance().getUserName())
+                .body(BodyInserters.fromValue(body.toString()))
                 .retrieve()
                 .bodyToMono(String.class)
                 .block();
     }
 
-    public void upsertEquipment(String studyId, String nodeId, String equipmentType, String resourceFileContent, boolean creation) {
-        String path = UriComponentsBuilder.fromPath("studies/{studyId}/nodes/{nodeId}/network-modification/" + equipmentType)
-                .buildAndExpand(studyId, nodeId, equipmentType)
+    public void modifyEquipmentAttribute(String studyId, String nodeId, String modificationType, String equipmentId, String attributeName, String attributeValue) {
+        String path = UriComponentsBuilder.fromPath(
+                        "studies/{studyId}/nodes/{nodeId}/network-modifications")
+                .buildAndExpand(studyId, nodeId)
                 .toUriString();
-        if (creation) {
-            LOGGER.info("createEquipment {} uri: '{}'", equipmentType, path);
-            webClient.post()
-                    .uri(path)
-                    .body(BodyInserters.fromValue(resourceFileContent))
-                    .retrieve()
-                    .bodyToMono(String.class)
-                    .block();
-        } else {
-            LOGGER.info("updateEquipment {} uri: '{}'", equipmentType, path);
-            webClient.put()
-                    .uri(path)
-                    .body(BodyInserters.fromValue(resourceFileContent))
-                    .retrieve()
-                    .bodyToMono(String.class)
-                    .block();
+        LOGGER.info("modifyEquipmentAttribute uri: '{}'", path);
+        // create body
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode body = mapper.createObjectNode();
+        body.put("type", modificationType);
+        body.put("equipmentId", equipmentId);
+        ObjectNode attribute = mapper.createObjectNode();
+        attribute.put("value", attributeValue);
+        attribute.put("op", "SET");
+        body.set(attributeName, attribute);
+        webClient.post()
+                .uri(path)
+                .header("userId", EnvProperties.getInstance().getUserName())
+                .body(BodyInserters.fromValue(body.toString()))
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
+    }
+
+    public void createModification(String studyId, String nodeId, String resourceFileContent) {
+        String path = UriComponentsBuilder.fromPath("studies/{studyId}/nodes/{nodeId}/network-modifications")
+                .buildAndExpand(studyId, nodeId)
+                .toUriString();
+        LOGGER.info("createModification {}", path);
+        webClient.post()
+                .uri(path)
+                .header("userId", EnvProperties.getInstance().getUserName())
+                .body(BodyInserters.fromValue(resourceFileContent))
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
+    }
+
+    public void editModification(String studyId, String nodeId, String modificationId, String resourceFileContent) {
+        String path = UriComponentsBuilder.fromPath("studies/{studyId}/nodes/{nodeId}/network-modifications/{modificationId}")
+                .buildAndExpand(studyId, nodeId, modificationId)
+                .toUriString();
+        LOGGER.info("editModification {}", path);
+        webClient.put()
+                .uri(path)
+                .header("userId", EnvProperties.getInstance().getUserName())
+                .body(BodyInserters.fromValue(resourceFileContent))
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
+    }
+
+    public void editModificationAttribute(String studyId, String nodeId, String modificationId, String attributeName, String attributeValue) {
+        String path = UriComponentsBuilder.fromPath("studies/{studyId}/nodes/{nodeId}/network-modifications/{modificationId}")
+                .buildAndExpand(studyId, nodeId, modificationId)
+                .toUriString();
+        LOGGER.info("editModificationAttribute {}", path);
+        JsonNode modification = ModificationsRequests.getInstance().getModification(modificationId);
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode body = modification.deepCopy();
+        body.set(attributeName, mapper.convertValue(attributeValue, JsonNode.class));
+        webClient.put()
+                .uri(path)
+                .header("userId", EnvProperties.getInstance().getUserName())
+                .body(BodyInserters.fromValue(body.toString()))
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
+    }
+
+    public JsonNode getModifications(String studyId, String nodeId) {
+        String path = UriComponentsBuilder.fromPath("studies/{studyId}/nodes/{nodeId}/network-modifications")
+                .buildAndExpand(studyId, nodeId)
+                .toUriString();
+        LOGGER.info("getModifications {}", path);
+        String jsonResponse = webClient.get()
+                .uri(path)
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
+        LOGGER.info("getModifications resp: '{}'", jsonResponse);
+        // parse Json data
+        if (jsonResponse != null) {
+            try {
+                ObjectMapper mapper = new ObjectMapper();
+                return mapper.readTree(jsonResponse);
+            } catch (JsonProcessingException je) {
+                return null;
+            }
         }
+        return null;
+    }
+
+    public void duplicateModification(String studyId, String sourceNodeId, String targetNodeId, String action, String modificationId) {
+        String path = UriComponentsBuilder.fromPath("studies/{studyId}/nodes/{targetNodeId}?action={action}&originStudyUuid={sourceStudyUuid}&originNodeUuid={sourceNodeId}")
+                .buildAndExpand(studyId, targetNodeId, action, studyId, sourceNodeId)
+                .toUriString();
+        ObjectMapper mapper = new ObjectMapper();
+        var body = mapper.createArrayNode();
+        body.add(modificationId);
+
+        LOGGER.info("duplicateModification {}", path);
+        webClient.put()
+                .uri(path)
+                .header("userId", EnvProperties.getInstance().getUserName())
+                .body(BodyInserters.fromValue(body))
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
     }
 
     public int deleteNode(String studyId, String nodeId) {
-        String path = UriComponentsBuilder.fromPath("studies/{studyId}/tree/nodes/{nodeId}")
+        String path = UriComponentsBuilder.fromPath("studies/{studyId}/tree/nodes?ids={nodeId}")
                 .buildAndExpand(studyId, nodeId)
                 .toUriString();
         LOGGER.info("deleteNode uri: '{}'", path);
         try {
-            String resp = webClient.delete()
+            webClient.delete()
                     .uri(path)
+                    .header("userId", EnvProperties.getInstance().getUserName())
                     .retrieve()
                     .bodyToMono(String.class)
                     .block();
@@ -430,7 +675,7 @@ public final class StudyRequests {
         return 200;
     }
 
-    public void createNode(String studyId, String nodeId, String newNodeName, String creationMode) {
+    public String createNode(String studyId, String nodeId, String newNodeName, String creationMode) {
         String path = UriComponentsBuilder.fromPath(
                         "studies/{studyId}/tree/nodes/{nodeId}?mode={creationMode}")
                 .buildAndExpand(studyId, nodeId, creationMode)
@@ -440,12 +685,75 @@ public final class StudyRequests {
         // create body (json tree)
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode body = mapper.createObjectNode();
-        body.put("buildStatus", "NOT_BUILT");
+        body.put("globalBuildStatus", "NOT_BUILT");
+        body.put("localBuildStatus", "NOT_BUILT");
         body.put("name", newNodeName);
         body.put("type", "NETWORK_MODIFICATION");
 
-        webClient.post()
+        String jsonResponse = webClient.post()
                 .uri(path)
+                .header("userId", EnvProperties.getInstance().getUserName())
+                .body(BodyInserters.fromValue(body.toString()))
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
+        try {
+            if (jsonResponse != null) {
+                JsonNode rootValue = mapper.readTree(jsonResponse);
+                if (rootValue.has("id")) {
+                    return rootValue.get("id").asText();
+                }
+            }
+        } catch (JsonProcessingException je) {
+            return null;
+        }
+        return null;
+    }
+
+    public String createSequence(String studyId, String nodeId, String sequenceType) {
+        String path = UriComponentsBuilder.fromPath(
+                        "studies/{studyId}/tree/nodes/{nodeId}?sequenceType={sequenceType}")
+                .buildAndExpand(studyId, nodeId, sequenceType)
+                .toUriString();
+        LOGGER.info("createSequence uri: '{}'", path);
+
+        String jsonResponse = webClient.post()
+                .uri(path)
+                .header("userId", EnvProperties.getInstance().getUserName())
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
+        try {
+            if (jsonResponse != null) {
+                ObjectMapper mapper = new ObjectMapper();
+                JsonNode rootValue = mapper.readTree(jsonResponse);
+                if (rootValue.has("id")) {
+                    return rootValue.get("id").asText();
+                }
+            }
+        } catch (JsonProcessingException je) {
+            return null;
+        }
+        return null;
+    }
+
+    public void renameNode(String studyId, String nodeId, String newNodeName) {
+        String path = UriComponentsBuilder.fromPath(
+                        "studies/{studyId}/tree/nodes")
+                .buildAndExpand(studyId)
+                .toUriString();
+        LOGGER.info("renameNode uri: '{}'", path);
+
+        // create body (json tree)
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode body = mapper.createObjectNode();
+        body.put("id", nodeId);
+        body.put("name", newNodeName);
+        body.put("type", "NETWORK_MODIFICATION");
+
+        webClient.put()
+                .uri(path)
+                .header("userId", EnvProperties.getInstance().getUserName())
                 .body(BodyInserters.fromValue(body.toString()))
                 .retrieve()
                 .bodyToMono(String.class)
@@ -470,22 +778,70 @@ public final class StudyRequests {
         return null;
     }
 
-    public void exportCase(String studyId, String nodeId, String format, Path filePath) {
-        String path = UriComponentsBuilder.fromPath("studies/{studyId}/nodes/{nodeId}/export-network/{fmt}")
-                .buildAndExpand(studyId, nodeId, format)
+    public UUID exportCase(String studyId, String rootNetworkUuid, String nodeId, String format, String fileName) {
+        String path = UriComponentsBuilder
+                .fromPath("studies/{studyId}/root-networks/{rootNetworkUuid}/nodes/{nodeId}/export-network/{fmt}")
+                .queryParam("fileName", fileName)
+                .queryParam("formatParameters", "{}")
+                .buildAndExpand(studyId, rootNetworkUuid, nodeId, format)
                 .toUriString();
 
-        Flux<DataBuffer> result = webClient.get()
+        return webClient.get()
                 .uri(path)
-                .accept(MediaType.APPLICATION_OCTET_STREAM)
+                .accept(MediaType.APPLICATION_JSON)
+                .header("userId", EnvProperties.getInstance().getUserName())
                 .retrieve()
-                .bodyToFlux(DataBuffer.class);
-
-        // save the flux into the chosen file
-        LOGGER.info("Saving case flux into {} ...", filePath);
-        DataBufferUtils
-                .write(result, filePath, CREATE)
+                .bodyToMono(UUID.class)
                 .block();
+    }
+
+    public void runSensitivityAnalysis(String studyId, String rootNetworkUuid, String nodeId) {
+        String path = UriComponentsBuilder.fromPath(
+                        "studies/{studyId}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/run")
+                .buildAndExpand(studyId, rootNetworkUuid, nodeId)
+                .toUriString();
+        LOGGER.info("runSensitivityAnalysis uri: '{}'", path);
+
+        webClient.post()
+                .uri(path)
+                .header("userId", EnvProperties.getInstance().getUserName())
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
+    }
+
+    public String getSensitivityStatus(String studyId, String rootNetworkUuid, String nodeId) {
+        String path = UriComponentsBuilder.fromPath("studies/{studyId}/root-networks/{rootNetworkUuid}/nodes/{nodeId}/sensitivity-analysis/status")
+                .buildAndExpand(studyId, rootNetworkUuid, nodeId)
+                .toUriString();
+        return webClient.get()
+                .uri(path)
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
+    }
+
+    public JsonNode getParentNodesReport(String studyId, String rootNetworkUuid, String nodeId, String reportType, boolean nodeOnlyReport) {
+        String path = UriComponentsBuilder.fromPath("/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport={nodeOnlyReport}&reportType={reportType}&severityLevels=INFO&severityLevels=WARN&severityLevels=ERROR&severityLevels=FATAL")
+                .buildAndExpand(studyId, rootNetworkUuid, nodeId, nodeOnlyReport, reportType)
+                .toUriString();
+        String response = webClient.get()
+                .uri(path)
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
+        LOGGER.info("getParentNodesReport uri: '{}'", path);
+        LOGGER.info("getParentNodesReport response: '{}'", response);
+
+        if (response != null) {
+            try {
+                ObjectMapper mapper = new ObjectMapper();
+                return mapper.readTree(response);
+            } catch (JsonProcessingException je) {
+                return null;
+            }
+        }
+        return null;
     }
 }
 
