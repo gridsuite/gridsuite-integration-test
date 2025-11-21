@@ -505,15 +505,6 @@ public class StudySrvStepDefinitions {
         ctx.setData(alias, data);
     }
 
-    @When("sleep {int} ms")
-    public void sleepMs(int timeInMs) {
-        try {
-            Thread.sleep(timeInMs);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-    }
-
     private void getAllEquipmentFrom(String equipmentType, String studyNodeName) {
         TestContext.Node nodeIds = ctx.getNodeId(studyNodeName);
         TestContext.RootNetwork rootNetwork = ctx.getCurrentRootNetwork();

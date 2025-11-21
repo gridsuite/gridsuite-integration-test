@@ -56,7 +56,6 @@ mvn test
 ```
 Features can be run on different platforms:
 - local: all REST calls are sent to localhost (no SSO token required), or using the gateway (SSO token required)
-- dev-master: calls are made on the gateway at https://dev-master.gridsuite.rte-france.com/gridexplore (SSO token required)
 - demo : Azure public platform using https://demo.gridsuite.org/gridexplore
 
 
@@ -67,16 +66,15 @@ The platform is defined in the Gerkhin feature file:
 ```
 Or overwritten as a property:
 ```
-mvn test -Dcucumber.filter.tags=@tagExample -Dusing_platform=dev-master
+mvn test -Dcucumber.filter.tags=@tagExample -Dusing_platform=demo
 mvn test -Dcucumber.features=classpath:org/gridsuite/bddtests/StudySrv.feature:133 -Dusing_platform=local
 ```
 
 When using an authentificated mode through the gateway, we must provide the 'bearer' token.
 We can use a nerver-expiring token, otherwise we have to retrieve it once the user has logged in explore webapp.
-In both cases, we have to set it in the properties file, like in dev-master_env.properties:
+In both cases, we have to set it in the properties file, like in demo_env.properties:
 ```
-username=DC00079T
-hostname=https://dev-master.gridsuite.rte-france.com/gridexplore/api/gateway
+api_hostname=https://demo.gridsuite.org/gridexplore/api/gateway
 bearer=eyJhbGciO...R0-CyUsC34keTQ
 ```
 
