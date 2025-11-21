@@ -4,44 +4,43 @@
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.bddtests.actions;
+package org.gridsuite.bddtests.config;
 
 import org.gridsuite.bddtests.common.EnvProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
-public final class ActionsRequests {
+public final class ConfigRequests {
 
-    public static synchronized ActionsRequests getInstance() {
+    public static synchronized ConfigRequests getInstance() {
         if (INSTANCE == null) {
-            INSTANCE = new ActionsRequests();
+            INSTANCE = new ConfigRequests();
         }
         return INSTANCE;
     }
 
-    private static ActionsRequests INSTANCE = null;
+    private static ConfigRequests INSTANCE = null;
     private final WebClient webClient;
     private final String version = "v1";
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ActionsRequests.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ConfigRequests.class);
 
-    private ActionsRequests() {
-        webClient = EnvProperties.getInstance().getWebClient(EnvProperties.MicroService.ActionServer);
+    private ConfigRequests() {
+        webClient = EnvProperties.getInstance().getWebClient(EnvProperties.MicroService.CONFIG_SERVER);
     }
 
-    public void updateFormContingencyList(String listId, String fileContent) {
+    public <T> void setParameter(String paramName, T paramValue) {
         String path = UriComponentsBuilder.fromPath(
-                        "form-contingency-lists/{listId}")
-                .buildAndExpand(listId)
+                        "applications/study/parameters/{paramName}?value={paramValue}")
+                .buildAndExpand(paramName, paramValue)
                 .toUriString();
-        LOGGER.info("updateFormContingencyList uri: '{}'", path);
+        LOGGER.info("run setParameter uri: '{}'", path);
 
         webClient.put()
                 .uri(path)
-                .body(BodyInserters.fromValue(fileContent))
+                .header("userId", EnvProperties.getInstance().getUserName())
                 .retrieve()
                 .bodyToMono(String.class)
                 .block();
