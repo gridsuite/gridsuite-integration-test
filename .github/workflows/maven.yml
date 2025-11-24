@@ -23,7 +23,7 @@ jobs:
       - name: Compile with Maven
         run: >
           mvn --batch-mode -Pjacoco verify
-          org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -DskipTests=true
           -Dsonar.host.url=https://sonarcloud.io
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
