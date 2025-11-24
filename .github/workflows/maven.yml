@@ -25,5 +25,7 @@ jobs:
           mvn --batch-mode -Pjacoco verify
           org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -DskipTests=true
           -Dsonar.host.url=https://sonarcloud.io
+          -Dsonar.organization=gridsuite
+          -Dsonar.projectKey=org.gridsuite:gridsuite-integration-test
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
