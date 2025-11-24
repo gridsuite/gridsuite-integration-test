@@ -40,10 +40,6 @@ public final class EnvProperties {
         return tmpRootDir;
     }
 
-    public void setTmpRootDir(String tmpSubDir) {
-        this.tmpRootDir = tmpSubDir;
-    }
-
     public enum MicroService {
         ACTION_SERVER,
         CASE_SERVER,
@@ -73,10 +69,6 @@ public final class EnvProperties {
 
     public String getMicroServiceUrl(MicroService ms) {
         return msUrlMap.get(ms);
-    }
-
-    public Properties getProps() {
-        return props;
     }
 
     public String getUserName() {
@@ -125,7 +117,7 @@ public final class EnvProperties {
 
     public boolean useToken() {
         String tokenMode = getTokenMode();
-        return tokenMode != null && ("jwt".equalsIgnoreCase(tokenMode) || "gaia".equalsIgnoreCase(tokenMode));
+        return ("jwt".equalsIgnoreCase(tokenMode) || "gaia".equalsIgnoreCase(tokenMode));
     }
 
     public String getClientSecret() {

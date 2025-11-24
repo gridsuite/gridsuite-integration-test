@@ -17,7 +17,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
 
 import java.net.URI;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -35,17 +34,6 @@ public final class NotificationWaiter {
 
     private static final ReactorNettyWebSocketClient client = new ReactorNettyWebSocketClient();
     private static final ObjectMapper mapper = new ObjectMapper();
-
-    public static void executeAndWaitForLoadFlowSuccess(Runnable asyncRequest, TestContext.Node node, int timeout) {
-        LOGGER.info("Wait for '{}' study loadflow completion (max: {} sec)", node.studyId, timeout);
-        waitForNotification(
-                asyncRequest,
-                jsonNode -> checkNotificationMatchLoadFlowSuccess(jsonNode, node.studyId, node.nodeId),
-                getStudyNotificationURI(node.studyId),
-                timeout,
-                1
-        );
-    }
 
     public static void executeAndWaitForStudyCreation(Runnable asyncRequest, String studyName, String directoryUuid, int timeout) {
         LOGGER.info("Wait for '{}' study creation completion (max: {} sec)", studyName, timeout);
@@ -129,33 +117,9 @@ public final class NotificationWaiter {
         return jsonElementName.equals(studyName) && jsonDirectoryUuid.equals(directoryUuid);
     }
 
-    private static boolean checkNotificationMatchLoadFlowSuccess(JsonNode json, String studyName, String nodeUuid) {
-        JsonNode headers = json.get("headers");
-        if (headers == null) {
-            return false;
-        }
-
-        String jsonUpdateType = headers.path("updateType").asText("");
-        String jsonStudyName = headers.path("studyUuid").asText("");
-        String jsonNode = headers.path("node").asText("");
-
-        return jsonUpdateType.equals("loadflowResult")
-            && jsonStudyName.equals(studyName)
-            && jsonNode.equals(nodeUuid);
-    }
-
     private static URI getDirectoryNotificationURI() {
         return UriComponentsBuilder.fromUri(URI.create(EnvProperties.getInstance().getMicroServiceUrl(EnvProperties.MicroService.DIRECTORY_NOTIFICATION_SERVER) + "/notify"))
             .queryParam("updateType", "directories")
-            .queryParam("userId", EnvProperties.getInstance().getUserName())
-            .queryParam("access_token", EnvProperties.getInstance().getToken())
-            .build()
-            .toUri();
-    }
-
-    private static URI getStudyNotificationURI(String studyUuid) {
-        return UriComponentsBuilder.fromUri(URI.create(EnvProperties.getInstance().getMicroServiceUrl(EnvProperties.MicroService.STUDY_NOTIFICATION_SERVER) + "/notify"))
-            .queryParam("studyUuid", studyUuid)
             .queryParam("userId", EnvProperties.getInstance().getUserName())
             .queryParam("access_token", EnvProperties.getInstance().getToken())
             .build()
@@ -166,26 +130,5 @@ public final class NotificationWaiter {
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, EnvProperties.getInstance().getUserName());
         return headers;
-    }
-
-    public static UUID executeAndWaitForExportNetworkFinished(Supplier<UUID> asyncRequest, String studyUuid, int timeout) {
-        LOGGER.info("Waiting for export completion (max: {} sec)", timeout);
-        return waitForNotification(
-                asyncRequest,
-                NotificationWaiter::checkNotificationMatchExportFinished,
-                getStudyNotificationURI(studyUuid),
-                timeout,
-                1
-        );
-    }
-
-    private static boolean checkNotificationMatchExportFinished(JsonNode json) {
-        JsonNode headers = json.get("headers");
-        if (headers == null) {
-            return false;
-        }
-
-        String type = headers.path("updateType").asText("");
-        return type.equals("networkExportFinished");
     }
 }

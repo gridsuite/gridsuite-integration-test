@@ -16,8 +16,8 @@ import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
+
 import java.nio.file.Path;
-import java.util.Optional;
 
 public final class ExploreRequests {
 
@@ -63,20 +63,6 @@ public final class ExploreRequests {
         }
     }
 
-    public void duplicateStudy(String studyId, String parentDirectoryId) {
-        String path = UriComponentsBuilder.fromPath("explore/studies")
-                .queryParam("duplicateFrom", studyId)
-                .queryParamIfPresent("parentDirectoryUuid", Optional.ofNullable(parentDirectoryId))
-                .toUriString();
-        LOGGER.info("duplicateStudy uri: '{}'", path);
-        webClient.post()
-                .uri(path)
-                .header("userId", EnvProperties.getInstance().getUserName())
-                .retrieve()
-                .bodyToMono(String.class)
-                .block();
-    }
-
     public void createCaseFromFile(String caseName, Path filePath, String description, String directoryId, String userId) {
         String path = UriComponentsBuilder.fromPath(
                         "explore/cases/{caseName}?description={description}&parentDirectoryUuid={parentDirectoryUuid}")
@@ -93,38 +79,6 @@ public final class ExploreRequests {
                 .header("userId", userId)
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .body(BodyInserters.fromMultipartData(builder.build()))
-                .retrieve()
-                .bodyToMono(String.class)
-                .block();
-    }
-
-    public void createContingencyList(String listName, String description, String directoryId, String jsonBody, String listType) {
-        // listType = form / identifier
-        String path = UriComponentsBuilder.fromPath(
-                        "explore/{listType}-contingency-lists/{listName}?description={description}&parentDirectoryUuid={parentDirectoryUuid}")
-                .buildAndExpand(listType, listName, description, directoryId)
-                .toUriString();
-        LOGGER.info("createContingencyList uri: '{}'", path);
-        webClient.post()
-                .uri(path)
-                .header("userId", EnvProperties.getInstance().getUserName())
-                .body(BodyInserters.fromValue(jsonBody))
-                .retrieve()
-                .bodyToMono(String.class)
-                .block();
-    }
-
-    public void createFormFilter(String filterName, String description, String directoryId, String jsonBody) {
-        String path = UriComponentsBuilder.fromPath(
-                        "explore/filters?name={filterName}&description={description}&parentDirectoryUuid={parentDirectoryUuid}")
-                .buildAndExpand(filterName, description, directoryId)
-                .toUriString();
-        LOGGER.info("createFormFilter uri: '{}'", path);
-
-        webClient.post()
-                .uri(path)
-                .header("userId", EnvProperties.getInstance().getUserName())
-                .body(BodyInserters.fromValue(jsonBody))
                 .retrieve()
                 .bodyToMono(String.class)
                 .block();

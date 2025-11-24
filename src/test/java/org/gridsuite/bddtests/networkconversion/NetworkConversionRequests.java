@@ -12,17 +12,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.bddtests.common.EnvProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.io.buffer.DataBufferUtils;
-import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
-import reactor.core.publisher.Flux;
-
-import java.nio.file.Path;
-import java.util.UUID;
-
-import static java.nio.file.StandardOpenOption.CREATE;
 
 public final class NetworkConversionRequests {
 
@@ -64,21 +55,5 @@ public final class NetworkConversionRequests {
             }
         }
         return null;
-    }
-
-    public void downloadExportFile(UUID exportUuid, Path filePath) {
-        String path = UriComponentsBuilder
-                .fromPath("download-file/{exportUuid}")
-                .buildAndExpand(exportUuid)
-                .toUriString();
-
-        Flux<DataBuffer> result = webClient.get()
-                .uri(path)
-                .accept(MediaType.APPLICATION_OCTET_STREAM)
-                .retrieve()
-                .bodyToFlux(DataBuffer.class);
-
-        LOGGER.info("Downloading exported file {} into {} ...", exportUuid, filePath);
-        DataBufferUtils.write(result, filePath, CREATE).block();
     }
 }
