@@ -21,22 +21,6 @@ public final class Utils {
         throw new java.lang.UnsupportedOperationException("BddUtils Utility class and cannot be instantiated");
     }
 
-    public static Path getBddFile(String subDir, String fileName) {
-        // look into local filesystem in $BDD_DATA_DIR/<subDir> directory
-        String bddDataDir = System.getenv("BDD_DATA_DIR");
-        assertNotNull("Cannot find system variable BDD_DATA_DIR", bddDataDir);
-        assertFalse("System variable BDD_DATA_DIR is empty", bddDataDir.isEmpty());
-
-        Path bddDir = Paths.get(bddDataDir, subDir);
-        assertTrue("Cannot find subdir named " + bddDir.toFile().getAbsolutePath(),
-                Files.exists(bddDir) && Files.isDirectory(bddDir));
-        Path bddFile = Paths.get(bddDir.toString(), fileName);
-        assertTrue("Cannot find file named " + bddFile.toFile().getAbsolutePath(),
-                Files.exists(bddFile) && Files.isRegularFile(bddFile));
-
-        return bddFile;
-    }
-
     public static String readFileContent(Path filePath, int nbLines) {
         String ret;
         try {
@@ -56,5 +40,14 @@ public final class Utils {
             ret = null;
         }
         return ret;
+    }
+
+    public static String getResourceFileContent(String resourceFileName) {
+        Path resourceFile = Paths.get("src", "test", "resources", resourceFileName);
+        assertTrue("Cannot find resource file named " + resourceFile.toFile().getAbsolutePath(),
+                Files.exists(resourceFile) && Files.isRegularFile(resourceFile));
+        String fileContent = Utils.readFileContent(resourceFile, -1);
+        assertTrue("Cannot read content from resource file named " + resourceFile.toFile().getAbsolutePath(), fileContent != null && !fileContent.isEmpty());
+        return fileContent;
     }
 }
