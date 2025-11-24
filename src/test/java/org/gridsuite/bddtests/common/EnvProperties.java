@@ -55,7 +55,7 @@ public final class EnvProperties {
     }
 
     private static EnvProperties INSTANCE = null;
-    private final String version = "v1";  // TODO only v1 for now
+    private final String version = "v1";
     private Properties props = null;
     private String userName = null;
     private String token = null;

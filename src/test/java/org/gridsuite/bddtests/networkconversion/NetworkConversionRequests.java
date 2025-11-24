@@ -18,13 +18,13 @@ import org.springframework.web.util.UriComponentsBuilder;
 public final class NetworkConversionRequests {
 
     public static synchronized NetworkConversionRequests getInstance() {
-        if (INSTANCE == null) {
-            INSTANCE = new NetworkConversionRequests();
+        if (instance == null) {
+            instance = new NetworkConversionRequests();
         }
-        return INSTANCE;
+        return instance;
     }
 
-    private static NetworkConversionRequests INSTANCE = null;
+    private static NetworkConversionRequests instance = null;
     private final WebClient webClient;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(NetworkConversionRequests.class);

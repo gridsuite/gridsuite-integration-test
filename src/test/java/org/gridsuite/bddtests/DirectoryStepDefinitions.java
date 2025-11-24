@@ -6,32 +6,11 @@
  */
 package org.gridsuite.bddtests;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import io.cucumber.java.After;
-import io.cucumber.java.Before;
-import io.cucumber.java.Scenario;
-import io.cucumber.java.en.*;
+import io.cucumber.java.en.Given;
 import org.gridsuite.bddtests.common.EnvProperties;
 import org.gridsuite.bddtests.common.TestContext;
-import org.gridsuite.bddtests.directory.DirectoryRequests;
-import org.gridsuite.bddtests.explore.ExploreRequests;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.time.Instant;
-import java.time.Duration;
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import static org.junit.Assert.*;
-import static org.junit.Assert.assertTrue;
 
 public class DirectoryStepDefinitions {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryStepDefinitions.class);
 
     private final TestContext ctx;
 

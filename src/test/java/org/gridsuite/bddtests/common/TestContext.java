@@ -57,7 +57,6 @@ public class TestContext {
     private String tmpRootDirId = null;
 
     // CONSTANTS:
-    // TODO providers could be retrieved with get request
     public static final ArrayList<String> LOADFLOW_PROVIDERS = new ArrayList<>(List.of("OpenLoadFlow"));
     public static final int MAX_WAITING_TIME_IN_SEC = 180;
     public static final int MAX_COMPUTATION_WAITING_TIME_IN_SEC = 300;
@@ -70,10 +69,6 @@ public class TestContext {
     );
 
     public static final Logger LOGGER = LoggerFactory.getLogger(TestContext.class);
-
-    // --------------------------------------------------------
-    public TestContext() {
-    }
 
     public void init() {
         LOGGER.info("BaseStepDefinitions init");

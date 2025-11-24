@@ -135,7 +135,6 @@ public class StudySrvStepDefinitions {
             }
         }
 
-        // result json example: { "formatName": "XIIDM", "extensions": "a,b,c,d,e,f",}
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode resultJson = mapper.createObjectNode();
         resultJson.put("formatName", format);
