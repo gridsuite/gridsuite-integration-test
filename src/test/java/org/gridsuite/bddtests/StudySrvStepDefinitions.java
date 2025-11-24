@@ -14,8 +14,8 @@ import io.cucumber.java.Before;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
-import net.jodah.failsafe.Failsafe;
-import net.jodah.failsafe.RetryPolicy;
+import dev.failsafe.Failsafe;
+import dev.failsafe.RetryPolicy;
 import org.gridsuite.bddtests.cases.CaseRequests;
 import org.gridsuite.bddtests.common.EnvProperties;
 import org.gridsuite.bddtests.common.TestContext;
@@ -37,7 +37,7 @@ import java.util.Optional;
 import java.util.stream.StreamSupport;
 
 import static org.gridsuite.bddtests.common.TestContext.MAX_COMPUTATION_WAITING_TIME_IN_SEC;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class StudySrvStepDefinitions {
 
@@ -67,7 +67,6 @@ public class StudySrvStepDefinitions {
     // --------------------------------------------------------
     // BACKGROUND conditions
 
-    // used
     // target platform
     @Given("using platform {string}")
     public void usingPlatform(String environmentName) {
@@ -80,17 +79,16 @@ public class StudySrvStepDefinitions {
             LOGGER.info("Using Property using_platform = '{}'", platformNameProp);
             envName = platformNameProp;
         }
-        assertTrue("Cannot load properties for env " + envName, EnvProperties.getInstance().init(envName));
+        assertTrue(EnvProperties.getInstance().init(envName), "Cannot load properties for env " + envName);
     }
 
-    // used
     // --------------------------------------------------------
     @When("create case {string} in {string} from resource {string}")
     public void createCaseInFromResource(String caseName, String directoryName, String caseFileName) {
         String dirId = ctx.getDirId(directoryName);
         Path resourceFile = Paths.get("src", "test", "resources", caseFileName);
-        assertTrue("Cannot find resource file named " + resourceFile.toFile().getAbsolutePath(),
-                Files.exists(resourceFile) && Files.isRegularFile(resourceFile));
+        assertTrue(Files.exists(resourceFile) && Files.isRegularFile(resourceFile),
+                "Cannot find resource file named " + resourceFile.toFile().getAbsolutePath());
         String user = EnvProperties.getInstance().getUserName();
         final String description = "STEP create_case_in_directory_from_resource";
         // async request
@@ -99,17 +97,18 @@ public class StudySrvStepDefinitions {
         // then wait for completion:
         // 1. check element creation in target directory
         String caseId = ctx.waitForElementCreation(dirId, "CASE", caseName);
-        assertNotNull("Case not created in directory with name " + caseName, caseId);
+        assertNotNull(caseId, "Case not created in directory with name " + caseName);
         // 2. check case creation completion
         final String cId = caseId;
-        RetryPolicy<Boolean> retryPolicyStudy = new RetryPolicy<Boolean>()
+        RetryPolicy<Object> retryPolicyStudy = RetryPolicy.builder()
                 .withDelay(Duration.ofMillis(1000))
                 .withMaxRetries(TestContext.MAX_WAITING_TIME_IN_SEC)
                 .onRetriesExceeded(e -> LOGGER.warn("Waiting time exceeded"))
-                .handleResult(Boolean.FALSE);
-        LOGGER.info("Wait for '{}' case creation completion (max: {} sec)", caseName, retryPolicyStudy.getMaxRetries());
+                .handleResult(Boolean.FALSE)
+                .build();
+        LOGGER.info("Wait for '{}' case creation completion (max: {} sec)", caseName, retryPolicyStudy.getConfig().getMaxRetries());
         boolean studyExists = Failsafe.with(retryPolicyStudy).get(() -> CaseRequests.getInstance().existsCase(cId));
-        assertTrue("Case full creation not confirmed", studyExists);
+        assertTrue(studyExists, "Case full creation not confirmed");
 
         ctx.setCurrentCase(caseName, caseId);
         ctx.setCaseExtentions(caseName, getCaseExtensions(caseId));
@@ -129,7 +128,7 @@ public class StudySrvStepDefinitions {
             Optional<JsonNode> extensionList = StreamSupport.stream(paramsJson.get("parameters").spliterator(), false)
                     .filter(n -> n.has("name") && n.has("possibleValues") && n.get("name").asText().equals(extensionsKey))
                     .findFirst();
-            assertFalse("Cannot find parameters child named " + extensionsKey, extensionList.isEmpty());
+            assertFalse(extensionList.isEmpty(), "Cannot find parameters child named " + extensionsKey);
             for (JsonNode v : extensionList.get().get("possibleValues")) {
                 extensions.add(v.asText());
             }
@@ -204,7 +203,7 @@ public class StudySrvStepDefinitions {
         String studyId = ctx.getStudyId(studyName);
         // check existence + keep Id only
         String nodeId = StudyRequests.getInstance().getNodeId(studyId, studyNodeName);
-        assertNotNull("No current tree node named " + studyNodeName, nodeId);
+        assertNotNull(nodeId, "No current tree node named " + studyNodeName);
         ctx.setCurrentNode(alias != null ? alias : studyNodeName, nodeId, studyId);
         return nodeId;
     }
@@ -212,7 +211,7 @@ public class StudySrvStepDefinitions {
     // --------------------------------------------------------
     private boolean isNodeBuilt(String studyId, String rootNetworkUuid, String nodeId) {
         String status = StudyRequests.getInstance().builtStatus(studyId, rootNetworkUuid, nodeId);
-        assertNotNull("Could not get build status", status);
+        assertNotNull(status, "Could not get build status");
         return status.matches("BUILT|BUILT_WITH_ERROR|BUILT_WITH_WARNING");
     }
 
@@ -259,7 +258,7 @@ public class StudySrvStepDefinitions {
     public void runLoadflowFromWithLimitReduction(String studyNodeName, int limitReduction) {
         TestContext.Node nodeIds = ctx.getNodeId(studyNodeName);
         TestContext.RootNetwork rootNetwork = ctx.getCurrentRootNetwork();
-        assertTrue("Node is not built", isNodeBuilt(nodeIds.studyId, rootNetwork.rootNetworkUuid, nodeIds.nodeId));
+        assertTrue(isNodeBuilt(nodeIds.studyId, rootNetwork.rootNetworkUuid, nodeIds.nodeId), "Node is not built");
         StudyRequests.getInstance().runLoadFlow(nodeIds.studyId, rootNetwork.rootNetworkUuid, nodeIds.nodeId, limitReduction);
     }
 
@@ -274,7 +273,7 @@ public class StudySrvStepDefinitions {
     public void loadflowStatusIsFrom(String computationStatus, String studyNodeName) {
         // check LF completion is equal to expected computation status
         boolean statusMatching = ctx.waitForStatusMatching(computationStatus, studyNodeName, TestContext.Computation.LOADFLOW, MAX_COMPUTATION_WAITING_TIME_IN_SEC);
-        assertTrue("Loadflow did not changed to status " + computationStatus, statusMatching);
+        assertTrue(statusMatching, "Loadflow did not changed to status " + computationStatus);
     }
 
     // --------------------------------------------------------
@@ -300,7 +299,7 @@ public class StudySrvStepDefinitions {
     // --------------------------------------------------------
     @Given("using loadflow {string} on {string}")
     public void usingLoadflowOn(String provider, String studyName) {
-        assertTrue("Provider must be in " + TestContext.LOADFLOW_PROVIDERS, TestContext.LOADFLOW_PROVIDERS.contains(provider));
+        assertTrue(TestContext.LOADFLOW_PROVIDERS.contains(provider), "Provider must be in " + TestContext.LOADFLOW_PROVIDERS);
         String studyId = ctx.getStudyId(studyName);
         StudyRequests.getInstance().setLoadFlowProvider(provider, studyId);
     }

@@ -25,7 +25,7 @@ import java.util.EnumMap;
 import java.util.Map;
 import java.util.Properties;
 
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public final class EnvProperties {
 
@@ -196,9 +196,9 @@ public final class EnvProperties {
                 newProps.load(input);
                 props = newProps;
                 String host = getHost();
-                assertNotNull("Cannot find api_hostname property", host);
+                assertNotNull(host, "Cannot find api_hostname property");
                 String wsHost = getWsHost();
-                assertNotNull("Cannot find ws_hostname property", wsHost);
+                assertNotNull(wsHost, "Cannot find ws_hostname property");
 
                 if (!useToken()) {
                     LOGGER.info("No Bearer used, username property = {}", getUserName());
@@ -217,12 +217,12 @@ public final class EnvProperties {
                     if ("jwt" .equalsIgnoreCase(getTokenMode())) {
                         String bearer = getBearer();
                         userName = getUserFromBearer(bearer);
-                        assertNotNull("Wrong JWT bearer/token, cannot extract username from it", userName);
+                        assertNotNull(userName, "Wrong JWT bearer/token, cannot extract username from it");
                         token = bearer;
                         LOGGER.info("Using JWT Bearer, username from token = {}", getUserName());
                     } else {
                         token = getAccessToken();
-                        assertNotNull("Cannot get access token from '" + getAuthUrl() + "' for user '" + getClientId() + "'", token);
+                        assertNotNull(token, "Cannot get access token from '" + getAuthUrl() + "' for user '" + getClientId() + "'");
                         userName = getClientId();
                         LOGGER.info("Using access token Bearer, username = {}", getClientId());
                     }
