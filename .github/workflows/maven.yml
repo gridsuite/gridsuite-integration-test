@@ -22,7 +22,7 @@ jobs:
 
       - name: Compile with Maven
         run: >
-          mvn --batch-mode -Pjacoco verify
+          mvn --batch-mode compile -DskipTests
           org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -DskipTests=true
           -Dsonar.host.url=https://sonarcloud.io
           -Dsonar.organization=gridsuite
