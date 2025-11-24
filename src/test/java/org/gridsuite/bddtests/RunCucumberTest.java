@@ -6,17 +6,12 @@
  */
 package org.gridsuite.bddtests;
 
-import io.cucumber.junit.CucumberOptions;
-import io.cucumber.junit.Cucumber;
-import org.junit.runner.RunWith;
+import org.junit.platform.suite.api.IncludeEngines;
+import org.junit.platform.suite.api.SelectPackages;
+import org.junit.platform.suite.api.Suite;
 
-@RunWith(Cucumber.class)
-@CucumberOptions(
-    plugin = {
-        "pretty",
-        "html:bddtests_report.html",
-        "rerun:bddtests_failure_to_rerun.txt"
-    }
-)
+@Suite
+@IncludeEngines("cucumber")
+@SelectPackages("org.gridsuite.bddtests")
 public class RunCucumberTest {
 }

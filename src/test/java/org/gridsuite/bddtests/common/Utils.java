@@ -14,7 +14,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public final class Utils {
     private Utils() {
@@ -44,10 +44,10 @@ public final class Utils {
 
     public static String getResourceFileContent(String resourceFileName) {
         Path resourceFile = Paths.get("src", "test", "resources", resourceFileName);
-        assertTrue("Cannot find resource file named " + resourceFile.toFile().getAbsolutePath(),
-                Files.exists(resourceFile) && Files.isRegularFile(resourceFile));
+        assertTrue(Files.exists(resourceFile) && Files.isRegularFile(resourceFile),
+                "Cannot find resource file named " + resourceFile.toFile().getAbsolutePath());
         String fileContent = Utils.readFileContent(resourceFile, -1);
-        assertTrue("Cannot read content from resource file named " + resourceFile.toFile().getAbsolutePath(), fileContent != null && !fileContent.isEmpty());
+        assertTrue(fileContent != null && !fileContent.isEmpty(), "Cannot read content from resource file named " + resourceFile.toFile().getAbsolutePath());
         return fileContent;
     }
 }

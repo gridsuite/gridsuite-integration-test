@@ -7,8 +7,8 @@
 package org.gridsuite.bddtests.common;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import net.jodah.failsafe.Failsafe;
-import net.jodah.failsafe.RetryPolicy;
+import dev.failsafe.Failsafe;
+import dev.failsafe.RetryPolicy;
 import org.gridsuite.bddtests.directory.DirectoryRequests;
 import org.gridsuite.bddtests.explore.ExploreRequests;
 import org.gridsuite.bddtests.study.StudyRequests;
@@ -18,8 +18,8 @@ import org.slf4j.LoggerFactory;
 import java.time.Duration;
 import java.util.*;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestContext {
 
@@ -100,31 +100,31 @@ public class TestContext {
     // --------------------------------------------------------
     public String getDirId(String name) {
         String id = currentDirectoryIds.getOrDefault(name, null);
-        assertNotNull("no directory " + name, id);
+        assertNotNull(id, "no directory " + name);
         return id;
     }
 
     public String getCaseId(String name) {
         String id = currentCaseIds.getOrDefault(name, null);
-        assertNotNull("no case " + name, id);
+        assertNotNull(id, "no case " + name);
         return id;
     }
 
     public String getStudyId(String name) {
         String id = currentStudyIds.getOrDefault(name, null);
-        assertNotNull("no study " + name, id);
+        assertNotNull(id, "no study " + name);
         return id;
     }
 
     public JsonNode getCaseExtentions(String name) {
         JsonNode id = currentCaseExtensions.getOrDefault(name, null);
-        assertNotNull("no case extension data " + name, id);
+        assertNotNull(id, "no case extension data " + name);
         return id;
     }
 
     public Node getNodeId(String name) {
         Node id = currentNodeIds.getOrDefault(name, null);
-        assertNotNull("no node " + name, id);
+        assertNotNull(id, "no node " + name);
         return id;
     }
 
@@ -162,7 +162,7 @@ public class TestContext {
     }
 
     public String getExtensionKey(String caseType) {
-        assertTrue("ExtensionKey must be in " + EXTENTION_KEYS.keySet(), EXTENTION_KEYS.containsKey(caseType));
+        assertTrue(EXTENTION_KEYS.containsKey(caseType), "ExtensionKey must be in " + EXTENTION_KEYS.keySet());
         return EXTENTION_KEYS.get(caseType);
     }
 
@@ -197,7 +197,7 @@ public class TestContext {
     // --------------------------------------------------------
     public String createRootDirectory(String dirName, String aliasName, String desc, String owner) {
         String rootDirId = DirectoryRequests.getInstance().createRootDirectory(dirName, owner, desc);
-        assertNotNull("Could not create root directory " + dirName, rootDirId);
+        assertNotNull(rootDirId, "Could not create root directory " + dirName);
         setCurrentDirectory(aliasName, rootDirId);
         return rootDirId;
     }
@@ -206,7 +206,7 @@ public class TestContext {
     // --------------------------------------------------------
     public String createDirectoryFromId(String aliasName, String dirName, String parentId, String owner) {
         String dirId = DirectoryRequests.getInstance().createDirectory(dirName, parentId, owner);
-        assertNotNull("Could not create directory " + dirName + " in parentId " + parentId, dirId);
+        assertNotNull(dirId, "Could not create directory " + dirName + " in parentId " + parentId);
         setCurrentDirectory(aliasName, dirId);
         return dirId;
     }
@@ -214,12 +214,13 @@ public class TestContext {
     // --------------------------------------------------------
     public String waitForElementCreation(String dirId, String elementType, String elementName) {
         // check element creation in target directory, and return its uuid
-        RetryPolicy<String> retryPolicyDirectory = new RetryPolicy<String>()
+        RetryPolicy<String> retryPolicyDirectory = RetryPolicy.<String>builder()
                 .withDelay(Duration.ofMillis(1000))
                 .withMaxRetries(MAX_WAITING_TIME_IN_SEC)
                 .onRetriesExceeded(e -> LOGGER.warn("Waiting time exceeded"))
-                .handleResult(null);
-        LOGGER.info("Wait for '{}' {} element creation in directory (max: {} sec)", elementName, elementType, retryPolicyDirectory.getMaxRetries());
+                .handleResult(null)
+                .build();
+        LOGGER.info("Wait for '{}' {} element creation in directory (max: {} sec)", elementName, elementType, retryPolicyDirectory.getConfig().getMaxRetries());
         String user = EnvProperties.getInstance().getUserName();
         return Failsafe.with(retryPolicyDirectory).get(() -> DirectoryRequests.getInstance().getElementId(user, dirId, elementType, elementName));
     }
@@ -234,7 +235,7 @@ public class TestContext {
         String dirId = getDirId(directoryName);
         String user = EnvProperties.getInstance().getUserName();
         String eltId = DirectoryRequests.getInstance().getElementId(user, dirId, eltType, eltName);
-        assertNotNull("Cannot find " + eltType + " named " + eltName + " in directory " + directoryName, eltId);
+        assertNotNull(eltId, "Cannot find " + eltType + " named " + eltName + " in directory " + directoryName);
         return eltId;
     }
 
@@ -243,7 +244,7 @@ public class TestContext {
         if (Objects.requireNonNull(compName) == Computation.LOADFLOW) {
             return expectedStatus.equalsIgnoreCase(StudyRequests.getInstance().getLoadFlowInfos(studyId, rootNetworkUuid, nodeId));
         } else {
-            assertTrue("bad computation name", true);
+            assertTrue(true, "bad computation name");
         }
         return false;
     }
@@ -252,12 +253,13 @@ public class TestContext {
         Node nodeIds = getNodeId(studyNodeName);
         RootNetwork rootNetwork = getCurrentRootNetwork();
 
-        RetryPolicy<Boolean> retryPolicy = new RetryPolicy<Boolean>()
+        RetryPolicy<Boolean> retryPolicy = RetryPolicy.<Boolean>builder()
                 .withDelay(Duration.ofMillis(1000))
                 .withMaxRetries(timeoutInSeconds)
                 .onRetriesExceeded(e -> LOGGER.warn("Waiting time exceeded"))
-                .handleResult(Boolean.FALSE);
-        LOGGER.info("Wait for {} completion with status '{}' (max: {} sec)", compName.name(), computationStatus, retryPolicy.getMaxRetries());
+                .handleResult(Boolean.FALSE)
+                .build();
+        LOGGER.info("Wait for {} completion with status '{}' (max: {} sec)", compName.name(), computationStatus, retryPolicy.getConfig().getMaxRetries());
         return Failsafe.with(retryPolicy).get(() -> statusMatching(computationStatus, nodeIds.studyId, rootNetwork.rootNetworkUuid, nodeIds.nodeId, compName));
     }
 
