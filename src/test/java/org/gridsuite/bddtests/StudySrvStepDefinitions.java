@@ -6,6 +6,7 @@
  */
 package org.gridsuite.bddtests;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -286,10 +287,17 @@ public class StudySrvStepDefinitions {
     // --------------------------------------------------------
     @When("set loadflow parameters with resource {string} with provider {string}")
     public void setLoadflowParametersWithResourceWithProvider(String resourceFileName, String provider) {
-        setComputationParametersWith(resourceFileName, "loadflow");
-        usingLoadflowOn(provider, TestContext.CURRENT_ELEMENT);
+        String studyId = ctx.getStudyId(TestContext.CURRENT_ELEMENT);
+        String fileContent = Utils.getResourceFileContent(resourceFileName);
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            ObjectNode paramsNode = (ObjectNode) mapper.readTree(fileContent);
+            paramsNode.put("provider", provider);
+            StudyRequests.getInstance().setComputationParameters(studyId, "loadflow", paramsNode.toString());
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Failed to inject provider into loadflow parameters", e);
+        }
     }
-
     // --------------------------------------------------------
     @Given("using loadflow {string}")
     public void usingLoadflow(String provider) {
