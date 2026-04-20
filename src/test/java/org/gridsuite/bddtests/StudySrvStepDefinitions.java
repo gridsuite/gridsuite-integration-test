@@ -278,13 +278,6 @@ public class StudySrvStepDefinitions {
     }
 
     // --------------------------------------------------------
-    private void setComputationParametersWith(String resourceFileName, String computationName) {
-        String studyId = ctx.getStudyId(TestContext.CURRENT_ELEMENT);
-        String fileContent = Utils.getResourceFileContent(resourceFileName);
-        StudyRequests.getInstance().setComputationParameters(studyId, computationName, fileContent);
-    }
-
-    // --------------------------------------------------------
     @When("set loadflow parameters with resource {string} with provider {string}")
     public void setLoadflowParametersWithResourceWithProvider(String resourceFileName, String provider) {
         String studyId = ctx.getStudyId(TestContext.CURRENT_ELEMENT);
