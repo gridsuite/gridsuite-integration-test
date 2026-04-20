@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.gridsuite.bddtests.common.EnvProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -202,19 +203,40 @@ public final class StudyRequests {
     }
 
     public void setLoadFlowProvider(String provider, String studyId) {
-        String path = UriComponentsBuilder.fromPath(
-                        "studies/{studyId}/loadflow/provider")
+        String getPath = UriComponentsBuilder.fromPath("studies/{studyId}/loadflow/parameters")
                 .buildAndExpand(studyId)
                 .toUriString();
-        LOGGER.info("setLoadFlowProvider with {} uri: '{}'", provider, path);
+        LOGGER.info("getLoadFlowParameters uri: '{}'", getPath);
 
-        webClient.post()
-                .uri(path)
-                .header("userId", EnvProperties.getInstance().getUserName())
-                .body(BodyInserters.fromValue(provider))// body contains only the provider name
+        String currentParams = webClient.get()
+                .uri(getPath)
                 .retrieve()
                 .bodyToMono(String.class)
                 .block();
+
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            ObjectNode paramsNode = currentParams != null
+                    ? (ObjectNode) mapper.readTree(currentParams)
+                    : mapper.createObjectNode();
+            paramsNode.put("provider", provider);
+
+            String postPath = UriComponentsBuilder.fromPath("studies/{studyId}/loadflow/parameters")
+                    .buildAndExpand(studyId)
+                    .toUriString();
+            LOGGER.info("setLoadFlowProvider (via parameters) with {} uri: '{}'", provider, postPath);
+
+            webClient.post()
+                    .uri(postPath)
+                    .header("userId", EnvProperties.getInstance().getUserName())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(BodyInserters.fromValue(paramsNode.toString()))
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .block();
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Failed to set loadflow provider", e);
+        }
     }
 
     public String getLoadFlowInfos(String studyId, String rootNetworkUuid, String nodeId) {
