@@ -6,6 +6,7 @@
  */
 package org.gridsuite.bddtests.common;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -111,8 +112,14 @@ public final class NotificationWaiter {
             return false;
         }
 
-        String jsonElementName = headers.path("elementName").asText("");
-        String jsonDirectoryUuid = headers.path("directoryUuid").asText("");
+        String jsonElementName = headers.path("elementNames").path(0).asText("");
+        JsonNode directoriesInfos;
+        try {
+            directoriesInfos = mapper.readTree(headers.path("directoriesInfos").asText());
+        } catch (JsonProcessingException e) {
+            return false;
+        }
+        String jsonDirectoryUuid = directoriesInfos.path(0).path("uuid").asText("");
 
         return jsonElementName.equals(studyName) && jsonDirectoryUuid.equals(directoryUuid);
     }
