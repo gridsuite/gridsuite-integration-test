@@ -42,14 +42,12 @@ public final class EnvProperties {
 
     public enum MicroService {
         ACTION_SERVER,
-        CASE_SERVER,
         CONFIG_SERVER,
         DIRECTORY_NOTIFICATION_SERVER,
         DIRECTORY_SERVER,
         EXPLORE_SERVER,
         FILTER_SERVER,
         MODIFICATION_SERVER,
-        NETWORK_CONVERSION_SERVER,
         STUDY_NOTIFICATION_SERVER,
         STUDY_SERVER
     }
@@ -203,14 +201,12 @@ public final class EnvProperties {
                 if (!useToken()) {
                     LOGGER.info("No Bearer used, username property = {}", getUserName());
                     msUrlMap.put(MicroService.ACTION_SERVER, host + ":5022");
-                    msUrlMap.put(MicroService.CASE_SERVER, host + ":5000");
                     msUrlMap.put(MicroService.CONFIG_SERVER, host + ":5025");
                     msUrlMap.put(MicroService.DIRECTORY_NOTIFICATION_SERVER, wsHost + ":5004");
                     msUrlMap.put(MicroService.DIRECTORY_SERVER, host + ":5026");
                     msUrlMap.put(MicroService.EXPLORE_SERVER, host + ":5029");
                     msUrlMap.put(MicroService.FILTER_SERVER, host + ":5027");
                     msUrlMap.put(MicroService.MODIFICATION_SERVER, host + ":5007");
-                    msUrlMap.put(MicroService.NETWORK_CONVERSION_SERVER, host + ":5003");
                     msUrlMap.put(MicroService.STUDY_NOTIFICATION_SERVER, wsHost + ":5009");
                     msUrlMap.put(MicroService.STUDY_SERVER, host + ":5001");
                 } else {
@@ -227,14 +223,12 @@ public final class EnvProperties {
                         LOGGER.info("Using access token Bearer, username = {}", getClientId());
                     }
                     msUrlMap.put(MicroService.ACTION_SERVER, host + "/actions");
-                    msUrlMap.put(MicroService.CASE_SERVER, host + "/case");
                     msUrlMap.put(MicroService.CONFIG_SERVER, host + "/config");
                     msUrlMap.put(MicroService.DIRECTORY_NOTIFICATION_SERVER, wsHost + "/directory-notification");
                     msUrlMap.put(MicroService.DIRECTORY_SERVER, host + "/directory");
                     msUrlMap.put(MicroService.EXPLORE_SERVER, host + "/explore");
                     msUrlMap.put(MicroService.FILTER_SERVER, host + "/filter");
                     msUrlMap.put(MicroService.MODIFICATION_SERVER, host + "/network-modification");
-                    msUrlMap.put(MicroService.NETWORK_CONVERSION_SERVER, host + "/network-conversion");
                     msUrlMap.put(MicroService.STUDY_NOTIFICATION_SERVER, wsHost + "/study-notification");
                     msUrlMap.put(MicroService.STUDY_SERVER, host + "/study");
                 }
