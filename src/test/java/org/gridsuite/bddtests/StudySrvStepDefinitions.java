@@ -20,7 +20,6 @@ import dev.failsafe.RetryPolicy;
 import org.gridsuite.bddtests.common.EnvProperties;
 import org.gridsuite.bddtests.common.TestContext;
 import org.gridsuite.bddtests.common.Utils;
-import org.gridsuite.bddtests.directory.DirectoryRequests;
 import org.gridsuite.bddtests.explore.ExploreRequests;
 import org.gridsuite.bddtests.study.StudyRequests;
 import org.junit.platform.commons.util.StringUtils;
@@ -106,7 +105,7 @@ public class StudySrvStepDefinitions {
                 .handleResult(Boolean.FALSE)
                 .build();
         LOGGER.info("Wait for '{}' case creation completion (max: {} sec)", caseName, retryPolicyStudy.getConfig().getMaxRetries());
-        String cId = Failsafe.with(retryPolicyStudy).get(() -> DirectoryRequests.getInstance().getElementId(user, dirId, "CASE", caseName));
+        String cId = Failsafe.with(retryPolicyStudy).get(() -> ExploreRequests.getInstance().getElementId(user, dirId, "CASE", caseName));
         assertNotNull(cId, "Case not created in directory with name " + caseName);
 
         ctx.setCurrentCase(caseName, caseId);
