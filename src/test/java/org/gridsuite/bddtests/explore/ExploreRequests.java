@@ -166,7 +166,7 @@ public final class ExploreRequests {
         body.put("description", desc);
 
         String jsonResponse = webClient.post()
-            .uri("explore/root-directories")
+            .uri("explore/directories/root-directories")
             .header("userId", user)
             .body(BodyInserters.fromValue(body.toString()))
             .retrieve()
