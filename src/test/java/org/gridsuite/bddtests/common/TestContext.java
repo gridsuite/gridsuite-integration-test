@@ -9,7 +9,6 @@ package org.gridsuite.bddtests.common;
 import com.fasterxml.jackson.databind.JsonNode;
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
-import org.gridsuite.bddtests.directory.DirectoryRequests;
 import org.gridsuite.bddtests.explore.ExploreRequests;
 import org.gridsuite.bddtests.study.StudyRequests;
 import org.slf4j.Logger;
@@ -185,7 +184,7 @@ public class TestContext {
     // --------------------------------------------------------
     public String checkOrCreateRootDirectory(String directoryName) {
         String userName = EnvProperties.getInstance().getUserName();
-        String dirId = DirectoryRequests.getInstance().getRootDirectoryId(userName, directoryName);
+        String dirId = ExploreRequests.getInstance().getRootDirectoryId(userName, directoryName);
         if (dirId == null) {
             dirId = createRootDirectory(directoryName, directoryName, "", userName);
         } else {
@@ -196,7 +195,7 @@ public class TestContext {
 
     // --------------------------------------------------------
     public String createRootDirectory(String dirName, String aliasName, String desc, String owner) {
-        String rootDirId = DirectoryRequests.getInstance().createRootDirectory(dirName, owner, desc);
+        String rootDirId = ExploreRequests.getInstance().createRootDirectory(dirName, owner, desc);
         assertNotNull(rootDirId, "Could not create root directory " + dirName);
         setCurrentDirectory(aliasName, rootDirId);
         return rootDirId;
@@ -205,7 +204,7 @@ public class TestContext {
 
     // --------------------------------------------------------
     public String createDirectoryFromId(String aliasName, String dirName, String parentId, String owner) {
-        String dirId = DirectoryRequests.getInstance().createDirectory(dirName, parentId, owner);
+        String dirId = ExploreRequests.getInstance().createDirectory(dirName, parentId, owner);
         assertNotNull(dirId, "Could not create directory " + dirName + " in parentId " + parentId);
         setCurrentDirectory(aliasName, dirId);
         return dirId;
@@ -222,7 +221,7 @@ public class TestContext {
                 .build();
         LOGGER.info("Wait for '{}' {} element creation in directory (max: {} sec)", elementName, elementType, retryPolicyDirectory.getConfig().getMaxRetries());
         String user = EnvProperties.getInstance().getUserName();
-        return Failsafe.with(retryPolicyDirectory).get(() -> DirectoryRequests.getInstance().getElementId(user, dirId, elementType, elementName));
+        return Failsafe.with(retryPolicyDirectory).get(() -> ExploreRequests.getInstance().getElementId(user, dirId, elementType, elementName));
     }
 
     public void executeAndWaitForStudyCreation(Runnable asyncRequest, String studyName, String directoryName, int secondsTimeout) {
@@ -234,7 +233,7 @@ public class TestContext {
     public String getElementFrom(String eltName, String eltType, String directoryName) {
         String dirId = getDirId(directoryName);
         String user = EnvProperties.getInstance().getUserName();
-        String eltId = DirectoryRequests.getInstance().getElementId(user, dirId, eltType, eltName);
+        String eltId = ExploreRequests.getInstance().getElementId(user, dirId, eltType, eltName);
         assertNotNull(eltId, "Cannot find " + eltType + " named " + eltName + " in directory " + directoryName);
         return eltId;
     }

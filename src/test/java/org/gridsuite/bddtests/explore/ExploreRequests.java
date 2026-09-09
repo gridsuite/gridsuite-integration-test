@@ -6,7 +6,12 @@
  */
 package org.gridsuite.bddtests.explore;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.gridsuite.bddtests.common.EnvProperties;
+import org.gridsuite.bddtests.directory.DirectoryElement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.FileSystemResource;
@@ -16,6 +21,7 @@ import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
+import reactor.core.publisher.Flux;
 
 import java.nio.file.Path;
 
@@ -96,5 +102,138 @@ public final class ExploreRequests {
                 .retrieve()
                 .bodyToMono(String.class)
                 .block();
+    }
+
+        public JsonNode getImportParameters(String caseId) {
+        String path = UriComponentsBuilder.fromPath(
+                        "explore/cases/{caseId}/import-parameters")
+                .buildAndExpand(caseId)
+                .toUriString();
+        LOGGER.info("getImportParameters uri: '{}'", path);
+        String jsonResponse = webClient.get()
+                .uri(path)
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
+        LOGGER.info("getImportParameters resp: '{}'", jsonResponse);
+        // parse Json data
+        if (jsonResponse != null) {
+            try {
+                ObjectMapper mapper = new ObjectMapper();
+                return mapper.readTree(jsonResponse);
+            } catch (JsonProcessingException je) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    public String createDirectory(String dirName, String parentId, String owner) {
+        // create body (json tree)
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode body = mapper.createObjectNode();
+        body.put("elementName", dirName);
+        body.put("owner", owner);
+        body.put("type", "DIRECTORY");
+        body.putNull("elementUuid");
+
+        String jsonResponse = webClient.post()
+            .uri("explore/directories/" + parentId + "/directories")
+            .header("userId", owner)
+            .body(BodyInserters.fromValue(body.toString()))
+            .retrieve()
+            .bodyToMono(String.class)
+            .block();
+        try {
+            if (jsonResponse != null) {
+                JsonNode rootValue = mapper.readTree(jsonResponse);
+                if (rootValue.has("elementUuid")) {
+                    return rootValue.get("elementUuid").asText();
+                }
+            }
+        } catch (JsonProcessingException je) {
+            return null;
+        }
+        return null;
+    }
+
+    public String createRootDirectory(String dirName, String user, String desc) {
+        // create body (json tree)
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode body = mapper.createObjectNode();
+        body.put("elementName", dirName);
+        body.put("owner", user);
+        body.put("description", desc);
+
+        String jsonResponse = webClient.post()
+            .uri("explore/directories/root-directories")
+            .header("userId", user)
+            .body(BodyInserters.fromValue(body.toString()))
+            .retrieve()
+            .bodyToMono(String.class)
+            .block();
+        try {
+            if (jsonResponse != null) {
+                JsonNode rootValue = mapper.readTree(jsonResponse);
+                if (rootValue.has("elementUuid")) {
+                    return rootValue.get("elementUuid").asText();
+                }
+            }
+        } catch (JsonProcessingException je) {
+            return null;
+        }
+        return null;
+    }
+
+    public String getElementId(String userId, String directoryId, String elementType, String elementName) {
+        final String[] eltId = {null};
+
+        // iterate through the stream
+        webClient.get()
+            .uri("explore/directories/" + directoryId + "/elements")
+            .header("userId", userId)
+            .retrieve()
+            .bodyToFlux(DirectoryElement.class)
+            .doOnNext(elt -> LOGGER.info("getElementId '{}'", elt))
+            .takeUntil(elt -> {
+                    if (elt.getElementName().equalsIgnoreCase(elementName)
+                        && elt.getType().equalsIgnoreCase(elementType)) {
+                        eltId[0] = elt.getElementUuid();
+                        return true;    // exit condition (flux disposal)
+                    } else {
+                        return false;
+                    }
+                }
+            )
+            .blockLast(); // this is a blocking subscribe
+        return eltId[0];
+    }
+
+    private Flux<DirectoryElement> requestRootDirectory(String userId) {
+        return webClient.get()
+            .uri("explore/directories/root-directories")
+            .header("userId", userId)
+            .retrieve()
+            .bodyToFlux(DirectoryElement.class);
+    }
+
+    public String getRootDirectoryId(String userId, String directoryName) {
+        final String[] dirId = {null};
+
+        // iterate through the stream
+        ExploreRequests.getInstance().requestRootDirectory(userId).doOnNext(
+                dir -> LOGGER.info("getRootDirectoryId '{}'", dir)
+            )
+            .takeUntil(dir -> {
+                    if (dir.getElementName().equalsIgnoreCase(directoryName)) {
+                        dirId[0] = dir.getElementUuid();
+                        return true;    // exit condition (flux disposal)
+                    } else {
+                        return false;
+                    }
+                }
+            )
+            .blockLast(); // this is a blocking subscribe
+        return dirId[0];
     }
 }

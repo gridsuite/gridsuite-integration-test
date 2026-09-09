@@ -17,12 +17,10 @@ import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
-import org.gridsuite.bddtests.cases.CaseRequests;
 import org.gridsuite.bddtests.common.EnvProperties;
 import org.gridsuite.bddtests.common.TestContext;
 import org.gridsuite.bddtests.common.Utils;
 import org.gridsuite.bddtests.explore.ExploreRequests;
-import org.gridsuite.bddtests.networkconversion.NetworkConversionRequests;
 import org.gridsuite.bddtests.study.StudyRequests;
 import org.junit.platform.commons.util.StringUtils;
 import org.slf4j.Logger;
@@ -100,7 +98,6 @@ public class StudySrvStepDefinitions {
         String caseId = ctx.waitForElementCreation(dirId, "CASE", caseName);
         assertNotNull(caseId, "Case not created in directory with name " + caseName);
         // 2. check case creation completion
-        final String cId = caseId;
         RetryPolicy<Object> retryPolicyStudy = RetryPolicy.builder()
                 .withDelay(Duration.ofMillis(1000))
                 .withMaxRetries(TestContext.MAX_WAITING_TIME_IN_SEC)
@@ -108,8 +105,8 @@ public class StudySrvStepDefinitions {
                 .handleResult(Boolean.FALSE)
                 .build();
         LOGGER.info("Wait for '{}' case creation completion (max: {} sec)", caseName, retryPolicyStudy.getConfig().getMaxRetries());
-        boolean studyExists = Failsafe.with(retryPolicyStudy).get(() -> CaseRequests.getInstance().existsCase(cId));
-        assertTrue(studyExists, "Case full creation not confirmed");
+        String cId = Failsafe.with(retryPolicyStudy).get(() -> ExploreRequests.getInstance().getElementId(user, dirId, "CASE", caseName));
+        assertNotNull(cId, "Case not created in directory with name " + caseName);
 
         ctx.setCurrentCase(caseName, caseId);
         ctx.setCaseExtentions(caseName, getCaseExtensions(caseId));
@@ -117,7 +114,7 @@ public class StudySrvStepDefinitions {
 
     // --------------------------------------------------------
     private JsonNode getCaseExtensions(String caseId) {
-        JsonNode paramsJson = NetworkConversionRequests.getInstance().getImportParameters(caseId);
+        JsonNode paramsJson = ExploreRequests.getInstance().getImportParameters(caseId);
         assertNotNull(paramsJson);
         assertTrue(paramsJson.has("formatName"));
         assertTrue(paramsJson.has("parameters"));
